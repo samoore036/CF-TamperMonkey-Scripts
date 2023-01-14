@@ -2,7 +2,7 @@
 // @name         Dwell Call Outs
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      1.1.2
+// @version      1.2
 // @description  Organize cpt call outs by pack group and put in an easy to read format for visibility in tracking dwelling cages
 // @author       mooshahe
 // @match        https://rodeo-iad.amazon.com/*/ItemList?*
