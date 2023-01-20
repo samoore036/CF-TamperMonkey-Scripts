@@ -4,6 +4,8 @@ This script is designed to increase visibility of useful metrics for Central Flo
 
 Please note: This script is to be used with Firefox. You must have the tampermonkey extension installed in order to use this. Additionally, this only works for rodeo pages organized by work pool THEN process path (not process path THEN work pool).
 
+Special thank you to Carlos Hernandez (carlhrn, https://github.com/MochaKnight) for helping to develop this script.
+
 How it works:
 
 The script will make a display bar at the top of rodeo utilizing the work pools displayed on the main rodeo page to summarize WIP, pickable, psolve and scanned buckets.
