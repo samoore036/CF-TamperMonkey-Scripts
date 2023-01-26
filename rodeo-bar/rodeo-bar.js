@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Rodeo Bar
-// @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
+// @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/rodeo-bar/rodeo-bar.js
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      2.0
+// @version      2.1
 // @description  Rodeo resource bar to display metrics to increase visibility for CF leads and sites alike
 // @author       mooshahe
 // @match        https://rodeo-iad.amazon.com/*/ExSD*
@@ -104,7 +104,13 @@
 
     //psolve will flag yellow at 80% of threshold and red at 100% of threshold
     function makePsolveDiv() {
-        const psolveTot = document.getElementById('ProblemSolvingTable').getElementsByClassName('grand-total')[0].getElementsByClassName('subtotal')[0].textContent.trim();
+        let psolveTot;
+        if (document.getElementById('ProblemSolvingTable') === null) {
+            psolveTot = 0;
+        } else {
+            psolveTot = document.getElementById('ProblemSolvingTable').getElementsByClassName('grand-total')[0].getElementsByClassName('subtotal')[0].textContent.trim();
+        }
+        
         let newDiv = document.createElement('div');
         let style = newDiv.style;
         if (parseInt(psolveTot) < psThreshold * .8) {
@@ -123,7 +129,13 @@
 
     //scanned will flag yellow at 80% of threshold and red at 100% of threshold
     function makeScannedDiv() {
-        const scannedTot = document.getElementById('ScannedTable').getElementsByClassName('grand-total')[0].getElementsByClassName('subtotal')[0].textContent.trim();
+        let scannedTot;
+        if (document.getElementById('ScannedTable') === null) {
+            scannedTot = 0;
+        } else {
+            scannedTot = document.getElementById('ScannedTable').getElementsByClassName('grand-total')[0].getElementsByClassName('subtotal')[0].textContent.trim();
+        }
+        
         let newDiv = document.createElement('div');
         let style = newDiv.style;
         if (parseInt(scannedTot) < scannedThreshold * .8) {
