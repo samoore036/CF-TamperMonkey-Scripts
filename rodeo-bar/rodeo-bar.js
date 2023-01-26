@@ -2,7 +2,7 @@
 // @name         Rodeo Bar
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/rodeo-bar/rodeo-bar.js
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      2.1.0
+// @version      3.0.0
 // @description  Rodeo resource bar to display metrics to increase visibility for CF leads and sites alike
 // @author       mooshahe
 // @match        https://rodeo-iad.amazon.com/*/ExSD*
