@@ -13,8 +13,6 @@
 
 /*ready state changes do not work at all, neither does window/document.loaded. 
 fc console is dynamically generated so must wait until it is completely loaded
-5 seconds seems to be a safe amount of time to wait to load.
-users will be alerted to reach out if they still get the issue of not loading.
 */
 
 let fc = document.URL.split('/')[4];
