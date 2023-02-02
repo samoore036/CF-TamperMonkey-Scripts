@@ -1,1338 +1,1155 @@
 // ==UserScript==
-// @name         FC Console Pick HCs
+// @name         Dwell Call Outs
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
-// @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js 
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      1.0
-// @description  Display set rates, TURs, and hcs vs actuals to increase visibility of pick hc deviations
+// @version      1.2
+// @description  Organize cpt call outs by pack group and put in an easy to read format for visibility in tracking dwelling cages
 // @author       mooshahe
-// @match        https://picking-console.na.picking.aft.a2z.com/fc/*/*
+// @match        https://rodeo-iad.amazon.com/*/ItemList?*
 // @grant        GM.xmlHttpRequest
-// @connect      process-path.na.picking.aft.a2z.com
 // ==/UserScript==
 
-/*ready state changes do not work at all, neither does window/document.loaded. 
-fc console is dynamically generated so must wait until it is completely loaded
-*/
-
-let fc = document.URL.split('/')[4];
-
-const data = new Promise(function(resolve) {
-        GM.xmlHttpRequest({
-            method: "GET",
-            url: `https://process-path.na.picking.aft.a2z.com/api/processpath/${fc}/processPathWithUserSettingsList`,
-            onreadystatechange: function(response) {
-                if (response.readyState == 4 && response.status == 200) {
-                    resolve(this.response);
-                }  else {
-                    console.log('did not get');
-                }
-            }
-        })
-});
-
-//after data is retrieved, wait until DOM is loaded then execute script
-data.then((data) => {
-    let interval = setInterval(() => {
-        if (document.getElementById('awsui-expandable-section-6') != null) {
-            clearInterval(interval);
-            loadScript(data);
-        } 
-    }, 1000);
-})
-
-function loadScript(data) {
+(function() {
     'use strict';
 
-    let currentFreeSelection;
-    let currentAssignedSelection;
-    let currentAssignedList;
-
-    const apiData = JSON.parse(data).processPaths; //gives an array of all process paths with set settings
-
-    /*---------------------------/
-    -local storage functionality-
-    /--------------------------*/
     /*
-
-    initialize localstorage if it has not been created yet
-    localstorage keys per site are fc-ce, fc-tso, fc-vrets
+    ---all global variables---
     */
-    if (localStorage.getItem(`${fc}-ce`) === null) {
-        localStorage.setItem(`${fc}-ce`, JSON.stringify([]));
-    }
-    if (localStorage.getItem(`${fc}-tso`) === null) {
-        localStorage.setItem(`${fc}-tso`, JSON.stringify([]));
-    }
-    if (localStorage.getItem(`${fc}-vrets`) === null) {
-        localStorage.setItem(`${fc}-vrets`, JSON.stringify([]));
-    }
+    const fc = document.URL.split('/')[3];
+    const rodeoLink = `https://rodeo-iad.amazon.com/${fc}/ExSD?yAxis=PROCESS_PATH&zAxis=WORK_POOL&shipmentTypes=ALL&exSDRange.quickRange=TODAY&exSDRange.dailyStart=00%3A00&exSDRange.dailyEnd=00%3A00&giftOption=ALL&fulfillmentServiceClass=ALL&fracs=NON_FRACS&isEulerExSDMiss=ALL&isEulerPromiseMiss=ALL&isEulerUpgraded=ALL&isReactiveTransfer=ALL&workPool=PredictedCharge&workPool=PlannedShipment&_workPool=on&workPool=ReadyToPick&workPool=ReadyToPickHardCapped&workPool=ReadyToPickUnconstrained&workPool=PickingNotYetPicked&workPool=PickingNotYetPickedPrioritized&workPool=PickingNotYetPickedNotPrioritized&workPool=PickingNotYetPickedHardCapped&workPool=CrossdockNotYetPicked&_workPool=on&workPool=PickingPicked&workPool=PickingPickedInProgress&workPool=PickingPickedInTransit&workPool=PickingPickedRouting&workPool=PickingPickedAtDestination&workPool=Inducted&workPool=RebinBuffered&workPool=Sorted&workPool=GiftWrap&workPool=Packing&workPool=Scanned&workPool=ProblemSolving&workPool=ProcessPartial&workPool=SoftwareException&workPool=Crossdock&workPool=PreSort&workPool=TransshipSorted&workPool=Palletized&_workPool=on&_workPool=on&processPath=&minPickPriority=MIN_PRIORITY&shipMethod=&shipOption=&sortCode=&fnSku=`;
 
-    function getCePaths() {
-        let ceArr = JSON.parse(localStorage.getItem(`${fc}-ce`));
+    //remove this content as it is useless
+    const displayElement = document.getElementsByClassName('shipment-list-tabs')[0];
+    displayElement.textContent = '';
 
-        if (ceArr.includes(',')) {
-            const arr = ceArr[0].split(',');
-            const trimmedArr = arr.map(path => path.trim());
-            //sort array alphabetically, as rodeo displays paths alphabetically (therefore CF planner as well), so that it aligns with planning tools
-            return trimmedArr.sort();
-        } 
+    const rows = Array.from(document.getElementsByClassName('result-table')[0].querySelectorAll('tr'));
+    rows.shift(); //shift method removes first element of an array
 
-        return ceArr.sort();
-    }
+    //dwellarray is a filtered list of each item to make sure we don't double count items from the same cage in the call out
+    const dwellArray = [];
 
-    function addCePath(pp) {
-        const currentCePaths = getCePaths();
-        currentCePaths.push(pp);
-        localStorage.setItem(`${fc}-ce`, JSON.stringify(currentCePaths));
-    }
+    /*arrays for each category. separated by singles pack group, multis pack group, bod/noncon/handtape grouped together, HOV and scanned
+      with TNS sites having different variations of where they process the same process path, this grouping method captures the variation
+      seen in our sites
+    */
+    const singles = [];
+    const multis = [];
+    const misc = [];
+    const hov = [];
+    const scanned = [];
 
-    function removeCePath(pp) {
-        const currentCePaths = getCePaths();
-        for (let i = 0; i < currentCePaths.length; i++) {
-            if (currentCePaths[i] === pp) {
-                currentCePaths.splice(i, 1);
+    const cpt = document.getElementsByClassName('result-table')[0].querySelectorAll('tr')[1].querySelectorAll('td')[3].textContent.split(' ')[1];
+
+    //get stats to display as a summary
+    let nonPickableTotal = 0;
+    let pickingPickedTotal = 0;
+    let pickingPickedAvg = 0;
+    let sortedTotal = 0;
+    let sortedAvg = 0;
+    let scannedTotal = 0;
+    let scannedAvg = 0;
+    let psolveTotal = 0;
+    let psolveAvg = 0;
+    addStats();
+
+    function addStats() {
+        for (let i = 0; i < rows.length; i++) {
+            let workPool = rows[i].querySelectorAll('td')[14].textContent.trim();
+            let dwellTime = parseInt(rows[i].querySelectorAll('td')[15].textContent.trim().split('\n')[0]);
+            switch (workPool) {
+                case 'PickingNotYetPickedNonPickable':
+                case 'ReadyToPickNonPickable':
+                    nonPickableTotal++;
+                    break;
+                case 'PickingPickedInProgress':
+                case 'PickingPickedInTransit':
+                case 'PickingPickedAtDestination':
+                    pickingPickedTotal++;
+                    pickingPickedAvg += dwellTime;
+                    break;
+                case 'Sorted':
+                    sortedTotal++;
+                    sortedAvg += dwellTime;
+                    break;
+                case 'Scanned':
+                    scannedTotal++;
+                    scannedAvg += dwellTime;
+                    break;
+                case 'ProblemSolving':
+                    psolveTotal++;
+                    psolveAvg += dwellTime;
             }
         }
-        localStorage.setItem(`${fc}-ce`, JSON.stringify(currentCePaths));
     }
 
-    function getTsoPaths() {
-        let tsoArr = JSON.parse(localStorage.getItem(`${fc}-tso`))
-        if (tsoArr.includes(',')) {
-            const arr = tsoArr[0].split(',');
-            const trimmedArr = arr.map(path => path.trim());
-            return trimmedArr.sort();
-        } 
-
-        return tsoArr.sort();
+    class dwellCallout{
+        constructor(scannableId, outerScannableId, pp, batchId, quantity, workPool, dwellTime) {
+            this.scannableId = scannableId;
+            this.outerScannableId = outerScannableId;
+            this.pp = pp;
+            this.batchId = batchId;
+            this.quantity = quantity;
+            this.workPool = workPool;
+            this.dwellTime = dwellTime;
+        }
     }
 
-    function addTsoPath(pp) {
-        const currentTsoPaths = getTsoPaths();
-        currentTsoPaths.push(pp);
-        localStorage.setItem(`${fc}-tso`, JSON.stringify(currentTsoPaths));
+    /*
+    ---array sorting logic---
+    */
+    filterToDwellArray();
+
+    /*iterate through every row and create an object for it
+      since
+    */
+    function filterToDwellArray() {
+        for (let i = 0; i < rows.length; i++) {
+            //if item is still PNYP or RTP, skip it as that is not a value-added call out to be made
+            //also skip psolve and packing
+            let workPool = rows[i].querySelectorAll('td')[14].textContent.trim();
+            if (workPool.includes('PickingNotYetPicked') || workPool.includes('ReadyToPick') || workPool.includes('ProblemSolving') || workPool.includes('Packing')) {
+                continue;
+            }
+
+            let dwellTime = rows[i].querySelectorAll('td')[15].textContent.trim().split('\n')[0];
+
+            if (workPool.includes('PickingPickedInProgress')) {
+                if (dwellTime < 60) {
+                    continue;
+                }
+            }
+
+            if (workPool.includes('PickingPickedInTransit')) {
+                if (dwellTime < 50) {
+                    continue;
+                }
+            }
+
+            if (workPool.includes('PickingPickedAtDestination')) {
+                if (dwellTime < 20) {
+                    continue;
+                }
+            }
+
+            if (workPool.includes('RebinBuffered')) {
+                if (dwellTime < 30) {
+                    continue;
+                }
+            }
+
+            if (workPool.includes('Sorted')) {
+                if (dwellTime < 30) {
+                    continue;
+                }
+            }
+
+            let quantity = parseInt(rows[i].querySelectorAll('td')[13].textContent.trim());
+
+            let scannableId = rows[i].querySelectorAll('td')[5].textContent.trim();
+            if (!scannableIsUnique(scannableId, quantity)) {
+                continue;
+            }
+
+            let outerScannableId = rows[i].querySelectorAll('td')[6].textContent.trim();
+
+            //if work pool is picking picked at destination, change data to outer scannable id for value-added call out
+            if (workPool === 'PickingPickedAtDestination') {
+                workPool = outerScannableId;
+            }
+            if (workPool === 'PickingPickedInTransit') {
+                workPool = 'PPIT';
+            }
+            if (workPool === 'PickingPickedInProgress') {
+                workPool = 'PPIP';
+            }
+
+            //if batch is in rebin buffered, change scannable id to rebin station for value-added call out
+            if (workPool === 'RebinBuffered') {
+                scannableId = outerScannableId;
+            }
+
+            let pp = rows[i].querySelectorAll('td')[10].textContent.trim().replace('PP', '');
+
+            let batchId = rows[i].querySelectorAll('td')[12].textContent.trim();
+            if (pp.includes('Multi')) {
+                if (!batchIsUnique(batchId, quantity)) {
+                continue;
+                }
+            }
+
+            let dwellObj = new dwellCallout(scannableId, outerScannableId, pp, batchId, quantity, workPool, dwellTime);
+            dwellArray.push(dwellObj);
+            arraySort(dwellObj);
+        }
     }
 
-    function removeTsoPath(pp) {
-        const currentTsoPaths = getTsoPaths();
-        for (let i = 0; i < currentTsoPaths.length; i++) {
-            if (currentTsoPaths[i] === pp) {
-                currentTsoPaths.splice(i, 1);
+    /*check if the current obj has the same scannable id as previous entries
+      if so, do not add to array and instead increase quantity for previous entry
+      quantity is needed so that quantity can increase by the appropriate amount
+    */
+    function scannableIsUnique(id, quantity) {
+        for (let obj of dwellArray) {
+            if (obj.scannableId === id) {
+                obj.quantity += quantity;
+                return false;
             }
         }
-        localStorage.setItem(`${fc}-tso`, JSON.stringify(currentTsoPaths));
+        return true;
     }
 
-    function getVretsPaths() {
-        let vretsArr = JSON.parse(localStorage.getItem(`${fc}-vrets`))
-        if (vretsArr.includes(',')) {
-            const arr = vretsArr[0].split(',');
-            const trimmedArr = arr.map(path => path.trim());
-            return trimmedArr.sort();
-        } 
-
-        return vretsArr.sort();
-    }
-
-    function addVretsPath(pp) {
-        const currentVretsPaths = getVretsPaths();
-        currentVretsPaths.push(pp);
-        localStorage.setItem(`${fc}-vrets`, JSON.stringify(currentVretsPaths));
-    }
-
-    function removeVretsPath(pp) {
-        const currentVretsPaths = getVretsPaths();
-        for (let i = 0; i < currentVretsPaths.length; i++) {
-            if (currentVretsPaths[i] === pp) {
-                currentVretsPaths.splice(i, 1);
+    /*check if current batch id is same as previous entries
+      if so, do not add to array and instead increase quantity for previous entry
+    */
+    function batchIsUnique(id, quantity) {
+        for (let obj of dwellArray) {
+            if (obj.batchId === id) {
+                obj.quantity += quantity;
+                return false;
             }
         }
-        localStorage.setItem(`${fc}-vrets`, JSON.stringify(currentVretsPaths));
+        return true;
     }
 
-    function isCurrentPath(pp) {
-        const cePaths = getCePaths();
-        const tsoPaths = getTsoPaths();
-        const vretsPaths = getVretsPaths();
-        for (let path of cePaths) {
-            if (path === pp) {
-                return true;
+    //put the object in the appropriate array which becomes it's own div display in rodeo
+    function arraySort(obj) {
+        //if item is in scanned, do not need to know process path
+        if (obj.workPool === 'Scanned') {
+            if (obj.dwellTime >= 30) {
+                scanned.push(obj);
             }
+            return;
         }
-        for (let path of tsoPaths) {
-            if (path === pp) {
-                return true;
+        switch(obj.pp) {
+            case 'HOVAuto':
+            case 'HOVSingle':
+            case 'HOVAutoL':
+            case 'HOVBOD':
+            case 'HOVHeavy':
+            case 'HOVNonCon':
+            case 'HOVSIOC':
+            case 'HOVNonAuto':
+            case 'HOVBox':
+                hov.push(obj);
+                break;
+            case 'MultiBldgWide':
+            case 'MultiBldgWideOP':
+            case 'MultiBldgWideOPVNA':
+            case 'MultiFloor':
+            case 'MultiMCF':
+            case 'MultiDG':
+            case 'MultiZappos':
+            case 'MultiCASEPallet':
+            case 'MultiWrap':
+            case 'BatchCart':
+                multis.push(obj);
+                break;
+            case 'SingleFloor':
+            case 'SingleOP':
+            case 'SingleOP2':
+            case 'SingleOPVNA':
+            case 'SingleOPZappos':
+            case 'SingleFloorDG':
+            case 'SingleCart':
+            case 'SingleTray':
+            case 'SingleTrayHVA':
+            case 'SingleTrayHVB':
+                singles.push(obj);
+                break;
+            case 'SingleOPBOD':
+            case 'SingleFloorBOD':
+            case 'SingleOPNonCon':
+            case 'SingleOPNonConLong':
+            case 'SingleFloorNonCon':
+            case 'SingleFloorSIOC':
+            case 'SingleOPSIOC':
+            case 'SingleOPVNASIOC':
+            case 'SingleOPWeights':
+            case 'SingleFloorWeights':
+            case 'SingleMCF':
+            case 'SingleFloorMCF':
+            case 'SingleFloorNonAuto':
+            case 'SingleOPNonAuto':
+            case 'SingleOPHandTape':
+            case 'SingleFloorHandTape':
+            case 'SingleTraySIOC':
+            case 'SingleSp00SIOC':
+                misc.push(obj);
+                break;
+        }
+    }
+
+    //sort arrays by quantity is the default
+    sortArraysByQuantity();
+
+    //convert dwell time to readable format
+    function getReadableTime(time) {
+        if (time === 0 || time === 'NaN') {
+            return 'N/A';
+        }
+        let hours = Math.floor(time/60);
+        let minutes = time - (hours * 60);
+        return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+    }
+
+    /*sort each array by quantity in descending order. quantity is the most value-added call out to make to site when chasing a cpt
+      scanned is by default sorted by dwell time as each sp00 is unique so qty will never be more than 1
+    */
+    function sortArraysByQuantity() {
+        singles.sort((a, b) => {return b.quantity - a.quantity});
+        multis.sort((a, b) => {return b.quantity - a.quantity});
+        misc.sort((a, b) => {return b.quantity - a.quantity});
+        hov.sort((a, b) => {return b.quantity - a.quantity});
+        scanned.sort((a, b) => {return b.dwellTime - a.dwellTime});
+    }
+
+    function sortArraysByDwellTime() {
+        singles.sort((a, b) => {return b.dwellTime - a.dwellTime});
+        multis.sort((a, b) => {return b.dwellTime - a.dwellTime});
+        misc.sort((a, b) => {return b.dwellTime - a.dwellTime});
+        hov.sort((a, b) => {return b.dwellTime - a.dwellTime});
+        // scanned.sort((a, b) => {return b.dwellTime - a.dwellTime});
+    }
+
+    /*
+    ---making tables for each array---
+    */
+    function makeSinglesTable() {
+        const table = document.createElement('table');
+
+        const titleRow = document.createElement('tr');
+
+        const titleHeader = document.createElement('th');
+        titleHeader.classList.add('table-header');
+        titleHeader.textContent = `Singles for ${cpt}`;
+        titleHeader.colSpan = '4';
+        titleRow.appendChild(titleHeader);
+
+        const headerRow = document.createElement('tr');
+
+        const th1 = document.createElement('th');
+        th1.textContent = 'Scannable Id';
+        th1.classList.add('scannable-id');
+        headerRow.appendChild(th1);
+
+        const th2 = document.createElement('th');
+        th2.textContent = 'Last Location';
+        th2.classList.add('work-pool');
+        headerRow.appendChild(th2);
+
+        const th3 = document.createElement('th');
+        th3.textContent = 'Quantity';
+        th3.classList.add('quantity');
+        headerRow.appendChild(th3);
+
+        const th4 = document.createElement('th');
+        th4.textContent = 'Dwell Time';
+        th4.classList.add('dwell-time');
+        headerRow.appendChild(th4);
+
+        table.appendChild(titleRow);
+        table.appendChild(headerRow);
+
+        return table;
+    }
+
+    function makeMultisTable() {
+        const table = document.createElement('table');
+
+        const titleRow = document.createElement('tr');
+        
+        const titleHeader = document.createElement('th');
+        titleHeader.classList.add('table-header');
+        titleHeader.textContent = `Multis for ${cpt}`;
+        titleHeader.colSpan = '5';
+        titleRow.appendChild(titleHeader);
+
+        const headerRow = document.createElement('tr');
+
+        const th1 = document.createElement('th');
+        th1.textContent = 'Scannable Id';
+        th1.classList.add('scannable-id');
+        headerRow.appendChild(th1);
+
+        const th2 = document.createElement('th');
+        th2.textContent = 'Last Location';
+        th2.classList.add('work-pool');
+        headerRow.appendChild(th2);
+
+        const th3 = document.createElement('th');
+        th3.textContent = 'Batch Id';
+        th3.classList.add('batch-id');
+        headerRow.appendChild(th3);
+
+        const th4 = document.createElement('th');
+        th4.textContent = 'Quantity';
+        th4.classList.add('quantity');
+        headerRow.appendChild(th4);
+
+        const th5 = document.createElement('th');
+        th5.textContent = 'Dwell Time';
+        th5.classList.add('dwell-time');
+        headerRow.appendChild(th5);
+
+        table.appendChild(titleRow);
+        table.appendChild(headerRow);
+
+        return table;
+    }
+
+    //change title of table depending on pack group
+    function makeMiscTable(pp) {
+        const table = document.createElement('table');
+
+        const titleRow = document.createElement('tr');
+
+        const titleHeader = document.createElement('th');
+        titleHeader.classList.add('table-header');
+        titleHeader.textContent = `${pp} for ${cpt}`;
+        titleHeader.colSpan = '5';
+        titleRow.appendChild(titleHeader);
+  
+        const headerRow = document.createElement('tr');
+
+        const th1 = document.createElement('th');
+        th1.textContent = 'Scannable Id';
+        th1.classList.add('scannable-id');
+        headerRow.appendChild(th1);
+
+        const th2 = document.createElement('th');
+        th2.textContent = 'Last Location';
+        th2.classList.add('work-pool');
+        headerRow.appendChild(th2);
+
+        const th3 = document.createElement('th');
+        th3.textContent = 'Process Path';
+        th3.classList.add('process-path');
+        headerRow.appendChild(th3);
+
+        const th4 = document.createElement('th');
+        th4.classList.add('quantity');
+
+        th4.textContent = 'Quantity';
+        headerRow.appendChild(th4);
+
+        const th5 = document.createElement('th');
+        th5.classList.add('dwell-time');
+        th5.textContent = 'Dwell Time';
+        headerRow.appendChild(th5);
+
+        table.appendChild(titleRow);
+        table.appendChild(headerRow);
+
+        return table;
+    }
+
+    function makeScannedTable() {
+        const table = document.createElement('table');
+
+        const titleRow = document.createElement('tr');
+
+        const titleHeader = document.createElement('th');
+        titleHeader.classList.add('table-header');
+        titleHeader.textContent = `Scanned for ${cpt}`;
+        titleHeader.colSpan = '3';
+        titleRow.appendChild(titleHeader);
+
+        const headerRow = document.createElement('tr');
+
+        const th1 = document.createElement('th');
+        th1.textContent = 'Sp00';
+        th1.classList.add('scannable-id');
+        headerRow.appendChild(th1);
+
+        const th2 = document.createElement('th');
+        th2.textContent = 'Last Location';
+        th2.classList.add('process-path');
+        headerRow.appendChild(th2);
+
+        const th3 = document.createElement('th');
+        th3.textContent = 'Dwell Time';
+        th3.classList.add('dwell-time');
+        headerRow.appendChild(th3);
+
+        table.appendChild(titleRow);
+        table.appendChild(headerRow);
+
+        return table;
+    }
+
+    /*
+    ---adding data to the respective table---
+    */
+    function addDataToSinglesTable(array, table) {
+        for (let obj of array) {
+            const row = document.createElement('tr');
+
+            const td1 = document.createElement('td');
+            td1.textContent = obj.scannableId;
+            row.appendChild(td1);
+
+            const td2 = document.createElement('td');
+            td2.textContent = obj.outerScannableId;
+
+            //if the cage is at a work station, highlight green
+            if (td2.textContent.includes('ws')) {
+                td2.style.backgroundColor = '#8ec1ef';
             }
-        }
-        for (let path of vretsPaths) {
-            if (path === pp) {
-                return true;
+            row.appendChild(td2);
+
+            const td3 = document.createElement('td');
+            td3.textContent = obj.quantity;
+            row.appendChild(td3);
+
+            const td4 = document.createElement('td');
+            td4.textContent = getReadableTime(obj.dwellTime);
+
+            // change color of cell based on dwell time
+            switch (true) {
+                case obj.dwellTime >= 360:
+                    td4.style.backgroundColor = '#F8696B';
+                    break;
+                case obj.dwellTime >= 120:
+                    td4.style.backgroundColor = '#ee821d';
+                    break;
+                case obj.dwellTime >= 60:
+                    td4.style.backgroundColor = '#eee71d';
+                    break;
+                case obj.dwellTime >= 30:
+                    td4.style.backgroundColor = '#39ca33';
+                    break;
+                case obj.dwellTime >= 0:
+                    td4.style.backgroundColor = '#e2fae1';
+                    break;
             }
+
+            row.appendChild(td4);
+
+            table.appendChild(row);
         }
-        return false;
     }
 
-    /*---------------/
-    -DOM adjustments-
-    /---------------*/
-    loadDisplay();
+    function addDataToMultisTable(array, table) {
+        for (let obj of array) {
+            const row = document.createElement('tr');
 
-    function loadDisplay() {
-        editOriginalDom();
-        const parentDiv = document.getElementsByClassName('awsui-row')[0];
-        const mainDiv = makePluginDisplay();
+            const td1 = document.createElement('td');
+            td1.textContent = obj.scannableId;
+            row.appendChild(td1);
 
-        const topDiv = makeTopDiv();
-        mainDiv.appendChild(makeTopDiv());
+            const td2 = document.createElement('td');
+            td2.textContent = obj.outerScannableId;
 
-        const ceTableDiv = makeTableDiv('ce');
-        ceTableDiv.appendChild(makeCeArrowToggle());
-        mainDiv.appendChild(ceTableDiv);
+            //if the cage is at a work station, highlight green
+            if (td2.textContent.includes('ws')) {
+                td2.style.backgroundColor = '#8ec1ef';
+            }
+            row.appendChild(td2);
 
-        const tsoTableDiv = makeTableDiv('tso');
-        tsoTableDiv.appendChild(makeTsoArrowToggle());
-        mainDiv.appendChild(tsoTableDiv);
+            const td3 = document.createElement('td');
+            td3.textContent = obj.batchId;
+            row.appendChild(td3);
 
-        const vretsTableDiv = makeTableDiv('vrets');
-        vretsTableDiv.appendChild(makeVretsArrowToggle());
-        mainDiv.appendChild(vretsTableDiv); 
+            const td4 = document.createElement('td');
+            td4.textContent = obj.quantity;
+            row.appendChild(td4);
 
-        parentDiv.appendChild(mainDiv);
+            const td5 = document.createElement('td');
+            td5.textContent = getReadableTime(obj.dwellTime);
 
-        loadTables();
-        //on load, tso and vrets tables are hidden
-        document.getElementById('tso-table').style.display = 'none';
-        document.getElementById('vrets-table').style.display = 'none';
+            // change color of cell based on dwell time
+            switch (true) {
+                case obj.dwellTime >= 360:
+                    td5.style.backgroundColor = '#F8696B';
+                    break;
+                case obj.dwellTime >= 120:
+                    td5.style.backgroundColor = '#ee821d';
+                    break;
+                case obj.dwellTime >= 60:
+                    td5.style.backgroundColor = '#eee71d';
+                    break;
+                case obj.dwellTime >= 30:
+                    td5.style.backgroundColor = '#39ca33';
+                    break;
+                case obj.dwellTime >= 0:
+                    td5.style.backgroundColor = '#e2fae1';
+                    break;
+            }
 
-        const overlay = makeOverlay();
-        mainDiv.appendChild(overlay);
-        styleSelectedLi();
-        styleElements();                      
+            row.appendChild(td5);
+
+            table.appendChild(row);
+        }
     }
 
+    function addDataToMiscTable(array, table, category) {
+        for (let obj of array) {
+            const row = document.createElement('tr');
 
-    function editOriginalDom() {
-        //use original feature to default hide this div on load
-        let displayDiv = document.getElementById('awsui-expandable-section-6');
-        displayDiv.classList.remove('awsui-expandable-section-content-expanded');
+            const td1 = document.createElement('td');
+            td1.textContent = obj.scannableId;
+            row.appendChild(td1);
 
-        let divArrow = document.getElementById('awsui-expandable-section-6-trigger');
-        divArrow.classList.remove('awsui-expandable-section-header-expanded');
+            const td2 = document.createElement('td');
+            td2.textContent = obj.outerScannableId;
 
-        //hide legend display 
-        document.getElementsByClassName('awsui-row')[1].style.display = 'none';
+            //if the cage is at a work station, highlight green
+            if (td2.textContent.includes('ws')) {
+                td2.style.backgroundColor = '#8ec1ef';
+            }
+            row.appendChild(td2);
+
+            const td3 = document.createElement('td');
+            td3.textContent = obj.pp;
+            row.appendChild(td3);
+
+            const td4 = document.createElement('td');
+            td4.textContent = obj.quantity;
+            row.appendChild(td4);
+
+            const td5 = document.createElement('td');
+            td5.textContent = getReadableTime(obj.dwellTime);
+
+            // change color of cell based on dwell time
+            switch (true) {
+                case obj.dwellTime >= 360:
+                    td5.style.backgroundColor = '#F8696B';
+                    break;
+                case obj.dwellTime >= 120:
+                    td5.style.backgroundColor = '#ee821d';
+                    break;
+                case obj.dwellTime >= 60:
+                    td5.style.backgroundColor = '#eee71d';
+                    break;
+                case obj.dwellTime >= 30:
+                    td5.style.backgroundColor = '#39ca33';
+                    break;
+                case obj.dwellTime >= 0:
+                    td5.style.backgroundColor = '#e2fae1';
+                    break;
+            }
+
+            row.appendChild(td5);
+
+            table.appendChild(row);
+        }
     }
 
-    //main display for the plugin that will go at the top above all other divs
-    function makePluginDisplay() {
+    function addDataToScannedTable(array, table) {
+        for (let obj of array) {
+            const row = document.createElement('tr');
+
+            const td1 = document.createElement('td');
+            td1.textContent = obj.scannableId;
+            row.appendChild(td1);
+
+            const td2 = document.createElement('td');
+            td2.textContent = obj.outerScannableId;
+
+            //if the cage is at a work station, highlight green
+            if (td2.textContent.includes('ws')) {
+                td2.style.backgroundColor = '#8ec1ef';
+            }
+            row.appendChild(td2);
+
+            const td3 = document.createElement('td');
+            td3.textContent = getReadableTime(obj.dwellTime);
+
+            // change color of cell based on dwell time
+            switch (true) {
+                case obj.dwellTime >= 360:
+                    td3.style.backgroundColor = '#F8696B';
+                    break;
+                case obj.dwellTime >= 120:
+                    td3.style.backgroundColor = '#ee821d';
+                    break;
+                case obj.dwellTime >= 60:
+                    td3.style.backgroundColor = '#eee71d';
+                    break;
+                case obj.dwellTime >= 30:
+                    td3.style.backgroundColor = '#39ca33';
+                    break;
+                case obj.dwellTime >= 0:
+                    td3.style.backgroundColor = '#e2fae1';
+                    break;
+            }
+
+            row.appendChild(td3);
+
+            table.appendChild(row);
+        }
+    }
+
+    /*
+    ---main html elements which consists of a side bar and a content div---
+    */
+    function makeMainDisplayDiv() {
+        const parentElement = document.getElementById('content-panel-padding');
+
+         /*
+        necessary to reset display when changing display by sort button
+        or else it will keep adding the display on every press
+        */
+        if (document.getElementById('main-display-div') !== null) {
+            const mainDiv = document.getElementById('main-display-div');
+            mainDiv.parentElement.removeChild(mainDiv);
+        }
+
+        const mainDiv = document.createElement('div');
+        mainDiv.setAttribute('id', 'main-display-div');
+
+        mainDiv.appendChild(makeSideBar());
+        mainDiv.appendChild(makeContentDiv());
+       
+        parentElement.prepend(mainDiv);
+    }
+
+    //contains sort button div, summary, legend, quick links (on load)
+    function makeSideBar() {
+        const sideBar = document.createElement('div');
+        sideBar.setAttribute('id', 'sidebar');
+
+        sideBar.appendChild(sortOptionDiv());
+
+        const summaryTable = makeSummaryTable();
+        styleTable(summaryTable);
+        sideBar.appendChild(summaryTable);
+
+        sideBar.appendChild(makeLegend());
+
+        return sideBar;
+    }
+
+    //contains all tables for call outs 
+    function makeContentDiv() {
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.setAttribute('id', 'content-div');
+        //reset div so if sort buttons are pressed, resets display instead of adding to
+        contentDiv.innerHTML = '';
+        
+        //only make table if there is a call out to display
+        if (singles.length > 0) {
+            const div = document.createElement('div');
+            div.classList.add('table-div');
+
+            const singlesTable = makeSinglesTable();
+            addDataToSinglesTable(singles, singlesTable);
+            styleTable(singlesTable);
+            div.appendChild(singlesTable, 4);
+            contentDiv.appendChild(div);
+        }
+
+        if (multis.length > 0) {
+            const div = document.createElement('div');
+            div.classList.add('table-div');
+
+            const multisTable = makeMultisTable();
+            addDataToMultisTable(multis, multisTable);
+            styleTable(multisTable);
+            div.appendChild(multisTable, 5);
+            contentDiv.appendChild(div);
+        }
+
+        if (misc.length > 0) {
+            const div = document.createElement('div');
+            div.classList.add('table-div');
+
+            const miscTable = makeMiscTable('BOD/NonCon/HandTape/Misc.');
+            addDataToMiscTable(misc, miscTable, 'misc');
+            styleTable(miscTable);
+            div.appendChild(miscTable, 5);
+            contentDiv.appendChild(div);
+        }
+
+        if (hov.length > 0) {
+            const div = document.createElement('div');
+            div.classList.add('table-div');
+
+            const hovTable = makeMiscTable('HOV');
+            addDataToMiscTable(hov, hovTable);
+            styleTable(hovTable);
+            div.appendChild(hovTable, 5);
+            contentDiv.appendChild(div);
+        }
+
+        if (scanned.length > 0) {
+            const div = document.createElement('div');
+            div.classList.add('table-div');
+
+            const scannedTable = makeScannedTable();
+            addDataToScannedTable(scanned, scannedTable);
+            styleTable(scannedTable);
+            div.appendChild(scannedTable, 3);
+            contentDiv.appendChild(div);
+        }
+
+        return contentDiv;
+    }
+
+    function makeLegend() {
         const div = document.createElement('div');
-        div.setAttribute('id', 'main-div');
+        div.classList.add('table-div');
+
+        const table = document.createElement('table');
+
+        const header = document.createElement('thead');
+
+        const titleRow = document.createElement('tr');
+
+        const titleHeader = document.createElement('th');
+        titleHeader.classList.add('table-header');
+        titleHeader.style.textAlign = 'center';
+
+        titleHeader.textContent = 'Legend';
+        titleHeader.colSpan = '1';
+        titleRow.appendChild(titleHeader);
+        table.appendChild(titleRow);
+
+        const tr1 = document.createElement('tr');
+        const td1 = document.createElement('td');
+        td1.textContent = 'at a work station';
+        td1.style.backgroundColor = '#8ec1ef';
+        td1.style.textAlign = 'center';
+        td1.style.padding = '0 0.5rem 0 0.5rem';
+        tr1.appendChild(td1);
+        table.appendChild(tr1);
+        
+
+        const tr2 = document.createElement('tr');
+        const td2 = document.createElement('td');
+        td2.textContent = 'less than 30 min dwell';
+        td2.style.backgroundColor = '#e2fae1';
+        td2.style.textAlign = 'center';
+        td2.style.padding = '0 0.5rem 0 0.5rem';
+        tr2.appendChild(td2);
+        table.appendChild(tr2);
+        
+        const tr3 = document.createElement('tr');
+        const td3 = document.createElement('td');
+        td3.textContent = 'dwelling 30 min - 1 hour';
+        td3.style.backgroundColor = '#39ca33';
+        td3.style.textAlign = 'center';
+        td3.style.padding = '0 0.5rem 0 0.5rem';
+        tr3.appendChild(td3);
+        table.appendChild(tr3);
+       
+        const tr4 = document.createElement('tr');
+        const td4 = document.createElement('td');
+        td4.textContent = 'dwelling 1 - 2 hours';
+        td4.style.backgroundColor = '#eee71d';
+        td4.style.textAlign = 'center';
+        td4.style.padding = '0 0.5rem 0 0.5rem';
+        tr4.appendChild(td4);
+        table.appendChild(tr4);
+       
+        const tr5 = document.createElement('tr');
+        const td5 = document.createElement('td');
+        td5.textContent = 'dwelling 2 - 6 hours';
+        td5.style.backgroundColor = '#ee821d';
+        td5.style.textAlign = 'center';
+        td5.style.padding = '0 0.5rem 0 0.5rem';
+        tr5.appendChild(td5);
+        table.appendChild(tr5);
+        
+        const tr6 = document.createElement('tr');
+        const td6 = document.createElement('td');
+        td6.textContent = 'dwelling 6+ hours';
+        td6.style.backgroundColor = '#f8696B';
+        td6.style.textAlign = 'center';
+        td6.style.padding = '0 0.5rem 0 0.5rem';
+        tr6.appendChild(td6);
+        table.appendChild(tr6);
+
+        div.appendChild(table);
 
         return div;
     }
 
-    function makeSettingsButton() {
-        const button = document.createElement('button');
-        button.setAttribute('id', 'settings-btn');
-        button.textContent = 'Process Path Settings';
-        button.addEventListener('click', openOverlay);
+    function makeSummaryTable() {
+        const div = document.createElement('div');
+        div.classList.add('table-div');
 
-        return button;
+        const table = document.createElement('table');
+        table.setAttribute('id', 'summary-table');
+
+        const header = document.createElement('thead');
+
+        const titleRow = document.createElement('tr');
+
+        const titleHeader = document.createElement('th');
+        titleHeader.classList.add('table-header');
+
+        titleHeader.textContent = 'Summary';
+        titleHeader.colSpan = '3';
+        titleHeader.style.textAlign = 'center';
+        titleRow.appendChild(titleHeader);
+        
+        const headerRow = document.createElement('tr');
+
+        const th1 = document.createElement('th');
+        th1.textContent = 'Work Pool';
+        th1.style.width = '2rem';
+        headerRow.appendChild(th1);
+
+        const th2 = document.createElement('th');
+        th2.textContent = 'Total';
+        th2.style.width = '2rem';
+        headerRow.appendChild(th2);
+
+        const th3 = document.createElement('th');
+        th3.textContent = '⠀⠀Avg Dwell Time';
+        headerRow.appendChild(th3);
+
+        header.appendChild(titleRow);
+        header.appendChild(headerRow);
+        table.appendChild(header);
+
+        table.appendChild(makeTableRow('Nonpickable', nonPickableTotal, ' '));
+        table.appendChild(makeTableRow('Picking Picked', pickingPickedTotal, getReadableTime((pickingPickedAvg/pickingPickedTotal).toFixed(0))));
+        table.appendChild(makeTableRow('Sorted', sortedTotal, getReadableTime((sortedAvg/sortedTotal).toFixed(0))));
+        table.appendChild(makeTableRow('Scanned', scannedTotal, getReadableTime((scannedAvg/scannedTotal).toFixed(0))));
+        table.appendChild(makeTableRow('Psolve', psolveTotal, getReadableTime((psolveAvg/psolveTotal).toFixed(0))));
+
+        div.appendChild(table);
+
+        return div;
     }
 
+    function makeTableRow(wp, tot, avgDwell) {
+        const tr = document.createElement('tr');
 
-    /*------------------/
-    -Added DOM elements-
-    /-----------------*/
+        const td1 = document.createElement('td');
+        td1.textContent = wp;
+        tr.appendChild(td1);
 
-    /*------------------/
-    -Settings functionality to add/remove 
-    paths to categories through local storage-
-    /-----------------*/
-    function makeOverlay() {
-        const overlay = document.createElement('div');
-        overlay.setAttribute('id', 'overlay');
-        overlay.style.display = 'none';
-        overlay.appendChild(makeSettingsDiv());
+        const td2 = document.createElement('td');
+        td2.textContent = tot;
+        tr.appendChild(td2);
 
-        return overlay;
+        const td3 = document.createElement('td');
+        td3.textContent = avgDwell;
+        tr.appendChild(td3);
+
+        return tr;
     }
 
-    function makeSettingsDiv() {
-        const settingsDiv = document.createElement('div');
-        settingsDiv.setAttribute('id', 'settings-div');
-
-        const currentPathsDiv = document.createElement('div');
-        currentPathsDiv.setAttribute('id', 'current-paths-div');
-
-        const header = document.createElement('h3');
-        header.textContent = 'Current Paths';
-        currentPathsDiv.appendChild(header);
-
-        const pathsDiv = document.createElement('div');
-        pathsDiv.setAttribute('id', 'paths-div');
-        currentPathsDiv.appendChild(pathsDiv);
-
-        const ceDiv = document.createElement('div');
-        ceDiv.setAttribute('id', 'current-ce-list-div');
-        const ceHeader = document.createElement('h4');
-        ceHeader.textContent = 'CE paths';
-        ceDiv.appendChild(ceHeader);
-
-        const ceList = document.createElement('ul');
-        ceList.setAttribute('id', 'current-ce-paths');
-        loadCurrentCePaths(ceList);
-        ceDiv.appendChild(ceList);
-        pathsDiv.appendChild(ceDiv);
-
-        const tsoDiv = document.createElement('div');
-        tsoDiv.setAttribute('id', 'current-tso-list-div');
-        const tsoHeader = document.createElement('h4');
-        tsoHeader.textContent = 'TSO paths';
-        tsoDiv.appendChild(tsoHeader);
-
-        const tsoList = document.createElement('ul');
-        tsoList.setAttribute('id', 'current-tso-paths');
-        loadCurrentTsoPaths(tsoList);
-        tsoDiv.appendChild(tsoList);
-        pathsDiv.appendChild(tsoDiv);
-
-        const vretsDiv = document.createElement('div');
-        vretsDiv.setAttribute('id', 'current-vrets-list-div');
-        const vretsHeader = document.createElement('h4');
-        vretsHeader.textContent = 'Vrets paths';
-        vretsDiv.appendChild(vretsHeader);
-
-        const vretsList = document.createElement('ul');
-        vretsList.setAttribute('id', 'current-vrets-paths');
-        loadCurrentVretsPaths(vretsList);
-        vretsDiv.appendChild(vretsList);
-        pathsDiv.appendChild(vretsDiv);
-
-        const button = document.createElement('button');
-        button.classList.add('settings-btn');
-        button.setAttribute('id', 'remove-btn');
-        button.textContent = 'Remove path';
-        button.addEventListener('click', removeCurrentPath);
-        currentPathsDiv.appendChild(button);
-
-        settingsDiv.appendChild(currentPathsDiv);
-        settingsDiv.appendChild(makeAllPathsDiv());
-        settingsDiv.appendChild(makeCloseSettingsBtn());
-
-        return settingsDiv;
-    }
-
-    function makeAllPathsDiv() {
-        const allPathsDiv = document.createElement('div');
-        allPathsDiv.setAttribute('id', 'all-paths-div');
-
-        const header = document.createElement('h3');
-        header.textContent = 'All Paths';
-        allPathsDiv.appendChild(header);
-
-        const mainSelectionDiv = document.createElement('div');
-        mainSelectionDiv.setAttribute('id', 'main-selection-div');
-
-        const listDiv = document.createElement('div');
-        listDiv.setAttribute('id', 'list-div');
-
-        const allPathsList = document.createElement('ul');
-        allPathsList.setAttribute('id', 'all-paths-list');
-        loadAllFreePaths(allPathsList); 
-        listDiv.appendChild(allPathsList);
-        mainSelectionDiv.appendChild(listDiv);
-
-        const selectionDiv = document.createElement('div');
-        selectionDiv.setAttribute('id', 'selection-div');
-
-        const ceAddButton = document.createElement('button');
-        ceAddButton.setAttribute('id', 'ce-btn');
-        ceAddButton.classList.add('settings-btn');
-        ceAddButton.textContent = 'Add to CE list';
-        ceAddButton.addEventListener('click', addToCEList);
-        selectionDiv.appendChild(ceAddButton);
-
-        const tsoAddButton = document.createElement('button');
-        tsoAddButton.setAttribute('id', 'tso-btn');
-        tsoAddButton.classList.add('settings-btn');
-        tsoAddButton.textContent = 'Add to TSO list';
-        tsoAddButton.addEventListener('click', addToTSOList);
-        selectionDiv.appendChild(tsoAddButton);
-
-        const vretsAddButton = document.createElement('button');
-        vretsAddButton.setAttribute('id', 'vrets-btn');
-        vretsAddButton.classList.add('settings-btn');
-        vretsAddButton.textContent = 'Add to VRETs list';
-        vretsAddButton.addEventListener('click', addToVretsList);
-        selectionDiv.appendChild(vretsAddButton);
-
-        mainSelectionDiv.appendChild(selectionDiv);
-        allPathsDiv.appendChild(mainSelectionDiv);
-
-        return allPathsDiv;
-    }
-
-    function makeCloseSettingsBtn() {
-        const button = document.createElement('button');
-        button.setAttribute('id', 'close-btn');
-        button.textContent = '✖';
-        button.addEventListener('click', closeSettings);
-
-        return button;
-    }
-
-    /*-----------------/
-    -DOM element logic-
-    /----------------*/
-    
-    function closeSettings() {
-        const overlay = document.getElementById('overlay');
-        overlay.style.display = 'none';
-        loadTables();
-    }
-
-    function loadCurrentCePaths(list) {
-        const currentPaths = getCePaths();
-        for (let pp of currentPaths) {
-            list.appendChild(makeLi(list, pp));
-        }
-    }
-
-    function loadCurrentTsoPaths(list) {
-        const currentPaths = getTsoPaths();
-        for (let pp of currentPaths) {
-            list.appendChild(makeLi(list, pp));
-        }
-    }
-
-    function loadCurrentVretsPaths(list) {
-        const currentPaths = getVretsPaths();
-        for (let pp of currentPaths) {
-            list.appendChild(makeLi(list, pp));
-        }
-    }
-
-    function removeCurrentPath() {
-        if (currentAssignedSelection === '') {
-            return;
-        }
-        switch (currentAssignedList) {
-            case 'current-ce-paths':
-                removeCePath(currentAssignedSelection);
-                break;
-            case 'current-tso-paths':
-                removeTsoPath(currentAssignedSelection);
-                break;
-            case 'current-vrets-paths':
-                removeVretsPath(currentAssignedSelection);
-                break;
-        }
-        updateFreePathsList();
-        updateCurrentLists();
-    }
-
-    function loadAllFreePaths(list) {
-        //iterate through all process paths on the main page and filter out those that are also in local storage
-        const rows = Array.from(document.getElementsByClassName('awsui-table-row'));
-        const pps = rows.map(row => row.querySelectorAll('td')[0].textContent);
-        pps.sort();
-        for (let pp of pps) {
-            if (!isCurrentPath(pp)) {
-                list.appendChild(makeLi(list, pp));
-            } 
-        }
-    }
-
-    function updateFreePathsList() {
-        const div = document.getElementById('list-div');
-        const list = document.getElementById('all-paths-list');
-        list.remove();
-       
-        const newList = document.createElement('ul');
-        newList.setAttribute('id', 'all-paths-list');
-        const rows = Array.from(document.getElementsByClassName('awsui-table-row'));
-        const pps = rows.map(row => row.querySelectorAll('td')[0].textContent);
-        pps.sort();
-
-        for (let pp of pps) {
-            if (!isCurrentPath(pp)) {
-                newList.appendChild(makeLi(newList, pp));
-            } 
-        }
-        div.appendChild(newList);
-        styleElements();
-    }
-
-    function updateCurrentLists() {
-        const currentCeList = document.getElementById('current-ce-paths');
-        const currentTsoList = document.getElementById('current-tso-paths');
-        const currentVretsList = document.getElementById('current-vrets-paths');
-        currentCeList.remove();
-        currentTsoList.remove();
-        currentVretsList.remove();
-
-        const ceDiv = document.getElementById('current-ce-list-div');
-        const newCeList = document.createElement('ul');
-        newCeList.setAttribute('id', 'current-ce-paths');
-        getCePaths().forEach(pp => newCeList.appendChild(makeLi(newCeList, pp)));
-        ceDiv.appendChild(newCeList);
-
-        const tsoDiv = document.getElementById('current-tso-list-div');
-        const newTsoList = document.createElement('ul');
-        newTsoList.setAttribute('id', 'current-tso-paths');
-        getTsoPaths().forEach(pp => newTsoList.appendChild(makeLi(newTsoList, pp)));
-        tsoDiv.appendChild(newTsoList);
-
-        const vretsDiv = document.getElementById('current-vrets-list-div');
-        const newVretsList = document.createElement('ul');
-        newVretsList.setAttribute('id', 'current-vrets-paths');
-        getVretsPaths().forEach(pp => newVretsList.appendChild(makeLi(newVretsList, pp)));
-        vretsDiv.appendChild(newVretsList);
-
-        styleSelectedLi();
-
-        styleElements();
-    }
-
-    function makeLi(list, pp) {
+    function makeLi(string) {
         const li = document.createElement('li');
-        if (list.id === 'all-paths-list') {
-            li.classList.add('all-paths-li');
-            li.textContent = pp;
-        } else {
-            li.classList.add('current-path');
-            li.textContent = pp;
-        }
-
-        li.onmouseover = li.style.cursor = 'pointer';
-
+        li.textContent = string;
+        li.style.listStyle = 'none';
         return li;
     }
 
-    /*
-    lists should first check if there is a selected value, otherwise do nothing
-    if there is a value, update the appropriate local storage to include this
-    take that path out of all paths list by checking against local storage
-    update current paths for that path by checking against local storage
-    */
-    function addToCEList() {
-        if (currentFreeSelection === undefined || currentFreeSelection === '') {
-            return;
-        }
-        addCePath(currentFreeSelection);
-        updateFreePathsList();
-        updateCurrentLists();
-        clearSelectedPath();
-    }
-
-    function addToTSOList() {
-        if (currentFreeSelection === undefined || currentFreeSelection === '') {
-            return;
-        }
-        addTsoPath(currentFreeSelection);
-        updateFreePathsList();
-        updateCurrentLists();
-        clearSelectedPath();
-    }
-
-    function addToVretsList() {
-        if (currentFreeSelection === undefined || currentFreeSelection === '') {
-            return;
-        }
-        addVretsPath(currentFreeSelection);
-        updateFreePathsList();
-        updateCurrentLists();
-        clearSelectedPath();
-    }
-
-    function makeTopDiv() {
+    function sortOptionDiv() {
         const div = document.createElement('div');
-        div.setAttribute('id', 'top-div');
+        div.style.border = '2px solid black';
+        div.style.borderRadius = '0.3rem';
+        div.style.display = 'flex';
+        div.style.flexDirection = 'column';
+        div.style.gap = '0.5rem';
+        div.style.padding = '0.5rem';
 
-        const settingsDiv = document.createElement('div');
-        settingsDiv.appendChild(makeSettingsButton());
-        div.appendChild(settingsDiv);
+        const quantitySortBtn = document.createElement('button');
+        quantitySortBtn.textContent = 'Sort by quantity';
+        quantitySortBtn.addEventListener('click', sortByQuantity);
+        div.appendChild(quantitySortBtn);
+
+        const dwellTimeSortBtn = document.createElement('button');
+        dwellTimeSortBtn.textContent = 'Sort by dwell time';
+        dwellTimeSortBtn.addEventListener('click', sortByDwellTime);
+        div.appendChild(dwellTimeSortBtn);
 
         return div;
     }
 
-    function makeTableDiv(category) {
-        const div = document.createElement('div');
-        div.setAttribute('id', `${category}-table-div`);
-
-        return div;
+    function sortByQuantity() {
+        sortArraysByQuantity();
+        load();
     }
 
-    function makeCeTable() {
-        const ceTable = document.createElement('table');
-        ceTable.setAttribute('id', 'ce-table');
+    function sortByDwellTime() {
+        sortArraysByDwellTime();
+        load();
+    }
+
+    async function makeQuickLinksDiv() {
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+        div.style.justifyContent = 'center';
+        div.style.border = '2px solid black';
+        div.style.padding = '1rem';
+        div.style.borderRadius = '0.3rem';
+
+        const table = document.createElement('table');
+
         const titleRow = document.createElement('tr');
-        titleRow.style.fontSize = '2rem';
-        titleRow.style.color = 'white';
-        titleRow.style.backgroundColor = '#3b82f6';
-        titleRow.style.border = '1px solid black';
-        titleRow.style.borderBottom = 'none';
+
         const titleHeader = document.createElement('th');
         titleHeader.classList.add('table-header');
-        titleHeader.textContent = 'CE Paths';
-        titleHeader.colSpan = '10';
+        titleHeader.style.textAlign = 'center';
+
+        titleHeader.textContent = 'Quick Links';
+        titleHeader.colSpan = '1';
         titleRow.appendChild(titleHeader);
-        ceTable.appendChild(titleRow);
+        table.appendChild(titleRow);
 
-        const categoriesRow = document.createElement('tr');
-        categoriesRow.style.fontSize = '1.5rem';
-        categoriesRow.style.color = 'white';
-        categoriesRow.style.backgroundColor = '#3b82f6';
-        categoriesRow.style.borderLeft = '1px solid black';
-        categoriesRow.style.borderRight = '1px solid black';
+        let value = await makeRequest(rodeoLink)
+        let dom = new DOMParser().parseFromString(value, 'text/html');
 
-        const td1 = makeHeaderTd('Process Path');
-        categoriesRow.appendChild(td1);
-        const td2 = makeHeaderTd('BL');
-        categoriesRow.appendChild(td2);
-        const td3 = makeHeaderTd('Active Pickers');
-        categoriesRow.appendChild(td3);
-        const td4 = makeHeaderTd('Set Pickers');
-        categoriesRow.appendChild(td4);
-        const td5 = makeHeaderTd('Delta');
-        categoriesRow.appendChild(td5);
-        const td6 = makeHeaderTd('Actual TUR');
-        categoriesRow.appendChild(td6);
-        const td7 = makeHeaderTd('Set TUR');
-        categoriesRow.appendChild(td7);
-        const td8 = makeHeaderTd('Actual Rate');
-        categoriesRow.appendChild(td8);
-        const td9 = makeHeaderTd('Set Rate');
-        categoriesRow.appendChild(td9);
-        const td10 = makeHeaderTd('Status');
-        categoriesRow.appendChild(td10);
-        ceTable.appendChild(categoriesRow);
-        
-        return ceTable;
-    }
+        let scannedLink = dom.getElementById('ScannedTable').getElementsByClassName('grand-total')[0].getElementsByClassName('subtotal')[0].querySelector('a').href;
+        let psolveLink = dom.getElementById('ProblemSolvingTable').getElementsByClassName('grand-total')[0].getElementsByClassName('subtotal')[0].querySelector('a').href;
 
-    function makeTsoTable() {
-        const tsoTable = document.createElement('table');
-        tsoTable.setAttribute('id', 'tso-table');
-        const titleRow = document.createElement('tr');
-        titleRow.style.fontSize = '2rem';
-        titleRow.style.color = 'white';
-        titleRow.style.backgroundColor = '#8B5CF6';
-        titleRow.style.border = '1px solid black';
-        titleRow.style.borderBottom = 'none';
-        const titleHeader = document.createElement('th');
-        titleHeader.classList.add('table-header');
-        titleHeader.textContent = 'TSO Paths';
-        titleHeader.colSpan = '8';
-        titleRow.appendChild(titleHeader);
-        tsoTable.appendChild(titleRow);
+        let scannedTitle = scannedLink === null ? 'No scanned units!' : 'Total Scanned';
+        let psolveTitle = psolveLink === null ? 'No psolve units!' : 'Total Psolve';
 
-        const categoriesRow = document.createElement('tr');
-        categoriesRow.style.fontSize = '1.5rem';
-        categoriesRow.style.color = 'white';
-        categoriesRow.style.backgroundColor = '#8B5CF6';
-        categoriesRow.style.borderLeft = '1px solid black';
-        categoriesRow.style.borderRight = '1px solid black';  
-
-        const td1 = makeHeaderTd('Process Path');
-        categoriesRow.appendChild(td1);
-        const td2 = makeHeaderTd('BL');
-        categoriesRow.appendChild(td2);
-        const td3 = makeHeaderTd('Active Pickers');
-        categoriesRow.appendChild(td3);
-        const td4 = makeHeaderTd('Set Pickers');
-        categoriesRow.appendChild(td4);
-        const td5 = makeHeaderTd('Delta');
-        categoriesRow.appendChild(td5);
-        const td6 = makeHeaderTd('Actual TUR');
-        categoriesRow.appendChild(td6);
-        const td7 = makeHeaderTd('Set TUR');
-        categoriesRow.appendChild(td7);
-        const td8 = makeHeaderTd('Status');
-        categoriesRow.appendChild(td8);
-        tsoTable.appendChild(categoriesRow);
-           
-        return tsoTable;
-    }
-
-    function makeVretsTable() {
-        const vretsTable = document.createElement('table');
-        vretsTable.setAttribute('id', 'vrets-table');
-        const titleRow = document.createElement('tr');
-        titleRow.style.fontSize = '2rem';
-        titleRow.style.color = 'white';
-        titleRow.style.backgroundColor = '#10B981';
-        titleRow.style.border = '1px solid black';
-        titleRow.style.borderBottom = 'none';
-        const titleHeader = document.createElement('th');
-        titleHeader.classList.add('table-header');
-        titleHeader.textContent = 'Vrets Paths';
-        titleHeader.colSpan = '8';
-        titleRow.appendChild(titleHeader);
-        vretsTable.appendChild(titleRow);
-
-        const categoriesRow = document.createElement('tr');
-        categoriesRow.style.fontSize = '1.5rem';
-        categoriesRow.style.color = 'white';
-        categoriesRow.style.backgroundColor = '#10B981';
-        categoriesRow.style.borderLeft = '1px solid black';
-        categoriesRow.style.borderRight = '1px solid black'; 
-
-        const td1 = makeHeaderTd('Process Path');
-        categoriesRow.appendChild(td1);
-        const td2 = makeHeaderTd('BL');
-        categoriesRow.appendChild(td2);
-        const td3 = makeHeaderTd('Active Pickers');
-        categoriesRow.appendChild(td3);
-        const td4 = makeHeaderTd('Set Pickers');
-        categoriesRow.appendChild(td4);
-        const td5 = makeHeaderTd('Delta');
-        categoriesRow.appendChild(td5);
-        const td6 = makeHeaderTd('Actual TUR');
-        categoriesRow.appendChild(td6);
-        const td7 = makeHeaderTd('Set TUR');
-        categoriesRow.appendChild(td7);
-        const td8 = makeHeaderTd('Status');
-        categoriesRow.appendChild(td8);
-        vretsTable.appendChild(categoriesRow);
-              
-        return vretsTable;
-    }
-
-    function loadTables() {
-        const ceTableDiv = document.getElementById('ce-table-div');
-        let prevCeDisplay;
-        if (document.getElementById('ce-table') != null) {
-            prevCeDisplay = document.getElementById('ce-table').style.display;
-            document.getElementById('ce-table').remove();
-        }
-        ceTableDiv.appendChild(loadCeTable())
-        document.getElementById('ce-table').style.display = prevCeDisplay;
-        
-        const tsoTableDiv = document.getElementById('tso-table-div');
-        let prevTsoDisplay;
-        if (document.getElementById('tso-table') != null) {
-            prevTsoDisplay = document.getElementById('tso-table').style.display;
-            document.getElementById('tso-table').remove();
-        }
-        tsoTableDiv.appendChild(loadTsoTable());
-        document.getElementById('tso-table').style.display = prevTsoDisplay;
-
-        const vretsTableDiv = document.getElementById('vrets-table-div');
-        let prevVretsDisplay;
-        if (document.getElementById('vrets-table') != null) {
-            prevVretsDisplay = document.getElementById('vrets-table').style.display;
-            document.getElementById('vrets-table').remove();
-        }
-        vretsTableDiv.appendChild(loadVretsTable());
-        document.getElementById('vrets-table').style.display = prevVretsDisplay;
-
-        styleTables();
-    }
-
-    function makeCeArrowToggle() {
-        const div = document.createElement('div');
-        div.classList.add('arrow-div');
-        div.style.display = 'flex';
-
-        const button = document.createElement('button');
-        button.classList.add('arrow-toggle');
-        button.textContent = '▼';
-        div.appendChild(button);
-
-        button.addEventListener('click', (e) => {
-            toggleParentElement(e);
-            if (e.target.textContent.includes('▼')) {
-                e.target.textContent = '▶';
-                const span = document.createElement('span');
-                span.textContent = 'Toggle CE Table';
-                div.appendChild(span);
-                styleSpans();
-                span.style.color = '#0073bb';
-                span.style.fontWeight = 'bold';
-                span.style.fontSize = '1.4rem';
-            } else {
-                e.target.textContent = '▼';
-                let parentElement = e.target.parentElement;
-                let span = parentElement.childNodes[1];
-                parentElement.removeChild(span);
-            }
-        })
-
-        return div;
-    }
-
-    function makeTsoArrowToggle() {
-        const div = document.createElement('div');
-        div.classList.add('arrow-div');
-        div.style.display = 'flex';
-
-        const button = document.createElement('button');
-        button.classList.add('arrow-toggle');
-        button.textContent = '▶';
-        div.appendChild(button);
-
-        const span = document.createElement('span');
-        span.textContent = 'Toggle TSO Table';
-        div.appendChild(span);
-        span.style.color = '#0073bb';
-        span.style.fontWeight = 'bold';
-        span.style.fontSize = '1.4rem';
-
-        button.addEventListener('click', (e) => {
-            toggleParentElement(e);
-            if (e.target.textContent.includes('▼')) {
-                e.target.textContent = '▶';
-                const span = document.createElement('span');
-                span.textContent = 'Toggle TSO Table';
-                div.appendChild(span);
-                styleSpans();
-                span.style.color = '#0073bb';
-                span.style.fontWeight = 'bold';
-                span.style.fontSize = '1.4rem';
-            } else {
-                e.target.textContent = '▼';
-                let parentElement = e.target.parentElement;
-                let span = parentElement.childNodes[1];
-                e.target.parentElement.removeChild(span);
-            }
-        })
-
-        return div;
-    }
-
-    function makeVretsArrowToggle() {
-        const div = document.createElement('div');
-        div.classList.add('arrow-div');
-        div.style.display = 'flex';
-
-        const button = document.createElement('button');
-        button.classList.add('arrow-toggle');
-        button.textContent = '▶';
-        div.appendChild(button);
-
-        const span = document.createElement('span');
-        span.textContent = 'Toggle Vrets Table';
-        div.appendChild(span);
-        span.style.color = '#0073bb';
-        span.style.fontWeight = 'bold';
-        span.style.fontSize = '1.4rem';
-
-        button.addEventListener('click', (e) => {
-            toggleParentElement(e);
-            if (e.target.textContent.includes('▼')) {
-                e.target.textContent = '▶';
-                const span = document.createElement('span');
-                span.textContent = 'Toggle Vrets Table';
-                div.appendChild(span);
-                styleSpans();
-                span.style.color = '#0073bb';
-                span.style.fontWeight = 'bold';
-                span.style.fontSize = '1.4rem';
-            } else {
-                e.target.textContent = '▼';
-                let parentElement = e.target.parentElement;
-                let span = parentElement.childNodes[1];
-                parentElement.removeChild(span);
-            }
-        })
-
-        return div;
-    }
-
-    function toggleParentElement(e) {
-        const table = e.target.parentElement.parentElement.childNodes[1];
-        if (table.style.display !== 'none') {
-            table.style.display = 'none';
+        const tr1 = document.createElement('tr');
+        const td1 = document.createElement('td');
+        td1.style.textAlign = 'center';
+        td1.style.padding = '0 0.5rem 0 0.5rem';
+        if (scannedLink !== null) {
+            td1.appendChild(makeAnchorElement(scannedLink, scannedTitle))
         } else {
-            table.style.display = 'block';
-        } 
-    }
+            td1.textContent = scannedTitle;
+        }
+        tr1.appendChild(td1);
+        table.appendChild(tr1);
 
-    function loadCeTable() {
-        const table = makeCeTable();
-
-        getCePaths().forEach(pp => {
-            table.appendChild(makeCeRow(pp));
-        });
-
-        return table;
-    }
-
-    function loadTsoTable() {
-        const table = makeTsoTable();
-
-        getTsoPaths().forEach(pp => {
-            table.appendChild(makeOtherRow(pp));
-        })
-
-        return table;
-    }
-
-    function loadVretsTable() {
-        const table = makeVretsTable();
-
-        getVretsPaths().forEach(pp => {
-            table.appendChild(makeOtherRow(pp));
-        })
-
-        return table;
-    }
-
-    function makeCeRow(pp) {
-        const row = document.createElement('tr');
-        row.classList.add('path-row');
-        const setData = getPathApi(pp);
-
-        const ppTd = makeLinkTd(pp);
-        ppTd.style.textAlign = 'left';
-        row.appendChild(ppTd);
-
-        const tur = setData.unitRateTarget;
-        const pra = setData.pickRateAverage;
-        const setPickers = Math.ceil(tur/pra); //api does not have set pickers so it is calculated by TUR/pick rate average
-
-        //only give a number for batch limit if it is a multis path
-        if (pp.includes('Multi')) {
-            row.appendChild(makeTd(setData.openBatchQuantityLimit));
+        const tr2 = document.createElement('tr');
+        const td2 = document.createElement('td');
+        td2.style.textAlign = 'center';
+        td2.style.padding = '0 0.5rem 0 0.5rem';
+        if (psolveLink !== null) {
+            td2.appendChild(makeAnchorElement(psolveLink, psolveTitle))
         } else {
-            row.appendChild(makeTd(''));
+            td2.textContent = psolveTitle;
         }
-        
-        row.appendChild(makeTd(getActivePickers(pp)));
-        row.appendChild(makeTd(setPickers));
+        tr2.appendChild(td2);
+        table.appendChild(tr2);
 
-        const deltaTd = makeTd(getDelta(setPickers, getActivePickers(pp)));
-        switch(deltaTd.textContent) {
-            case '0': deltaTd.style.backgroundColor = '#22c55e';
-                break;
-            default: deltaTd.style.backgroundColor = '#f87171';
-        }
-        row.appendChild(deltaTd);
+        div.appendChild(table);
 
-        row.appendChild(makeTd(getActualTur(pp)));
+        const sideBar = document.getElementById('sidebar');
+        sideBar.appendChild(div);
+    };
 
-        //if path is HOV and TUR is set to 1000, flag green, otherwise red. SW is all HOV paths should be set to 1000
-        const turTd = makeTd(tur);
-        if (pp.includes('PPHOV')) {
-            switch(turTd.textContent) {
-                case '1000': turTd.style.backgroundColor = '#22c55e';
-                    break;
-                default: turTd.style.backgroundColor = '#f87171';
-            }
-        }
-        row.appendChild(turTd);
-
-        row.appendChild(makeTd(getActualRate(pp)));
-        row.appendChild(makeTd(pra));
-
-        const statusTd = makeTd(setData.status);
-        statusTd.style.color = 'white';
-        statusTd.style.fontSize = '1.4rem';
-        statusTd.style.textAlign = 'center';
-        switch (statusTd.textContent) {
-            case 'Active': statusTd.style.backgroundColor = '#22c55e';
-                break;
-            case 'Active_CollateDisabled': 
-                statusTd.textContent = 'ACD';
-                statusTd.style.backgroundColor = 'red';
-            default: statusTd.style.backgroundColor = 'red';
-        }
-        row.appendChild(statusTd);
-
-        return row;
-    }
-
-    function makeOtherRow(pp) {
-        const row = document.createElement('tr');
-        row.classList.add('path-row');
-        const setData = getPathApi(pp);
-        
-        const ppTd = makeLinkTd(pp);
-        ppTd.style.textAlign = 'left';
-        row.appendChild(ppTd);
-
-        const tur = setData.unitRateTarget;
-        const pra = setData.pickRateAverage;
-        const setPickers = pra === 0 ? '' : Math.ceil(tur/pra); //api does not have set pickers so it is calculated by TUR/pick rate average
-
-        //only give a number for batch limit if it is a multis path
-        row.appendChild(makeTd(setData.openBatchQuantityLimit));
-        
-        row.appendChild(makeTd(getActivePickers(pp)));
-        row.appendChild(makeTd(setPickers));
-
-        const deltaTd = makeTd(getDelta(setPickers, getActivePickers(pp)));
-        switch(deltaTd.textContent) {
-            case '0': deltaTd.style.backgroundColor = '#22c55e';
-                break;
-            default: deltaTd.style.backgroundColor = '#f87171';
-        }
-        row.appendChild(deltaTd);
-
-        row.appendChild(makeTd(getActualTur(pp)));
-
-        row.appendChild(makeTd(tur));
-
-        const statusTd = makeTd(setData.status);
-        statusTd.style.color = 'white';
-        statusTd.style.fontSize = '1.4rem';
-        statusTd.style.textAlign = 'center';
-        switch (statusTd.textContent) {
-            case 'Active': statusTd.style.backgroundColor = '#22c55e';
-                break;
-            case 'Active_CollateDisabled': 
-                statusTd.textContent = 'ACD';
-                statusTd.style.backgroundColor = 'red';
-            default: statusTd.style.backgroundColor = 'red';
-        }
-        row.appendChild(statusTd);
-
-        return row;
-    }
-
-    function makeLinkTd(pp) {
-        const td = document.createElement('td');
-        td.classList.add('row-td');
-
-        const a = document.createElement('a');
-        a.textContent = pp;
-        a.href = `https://process-path.na.picking.aft.a2z.com/fc/${fc}/properties/process-path/${pp}`;
-        td.appendChild(a);
-
-        return td;
-    }
-
-    function makeHeaderTd(str) {
-        const td = document.createElement('td');
-        td.style.padding = '1rem 2rem 0 2rem';
-        td.textContent = str;
-        return td;
-    }
-
-    function makeTd(str) {
-        const td = document.createElement('td');
-        td.classList.add('row-td');
-        td.textContent = str;
-        return td;
-    }
-
-    //make getters for all the info needed
-    /*
-    two categories of data. set data that needs to be accessed 
-    by the process path's api, including batch limit, status, 
-    set pickers, set TUR, and set rate (PRA). actual data that can
-    be accessed on the main page of fc console, including active pickers,
-    actual TUR, and actual rate.
-    */
-
-    //return api path object to get access to all attributes
-    function getPathApi(pp) {
-        for (let path of apiData) {
-            if (path.processPathName === pp) {
-                return path;
-            }
-        }
-    }
-
-    function getActivePickers(pp) {
-        let row = getProcessPath(pp);
-        return row.querySelectorAll('td')[9].textContent;
-    }
-
-    function getDelta(setPickers, activePickers) {
-        return activePickers - setPickers;
-    }
-
-    function getActualTur(pp) {
-        let row = getProcessPath(pp);
-        return row.querySelectorAll('td')[10].textContent;
-    }
-
-    function getActualRate(pp) {
-        let row = getProcessPath(pp);
-        return Math.round(row.querySelectorAll('td')[11].textContent);
-    }
-
-    //find the process path in fc console to get all of the actual data
-    function getProcessPath(pp) {
-        const rows = document.getElementsByClassName('awsui-table-row');
-        for (let row of rows) {
-            if (row.querySelectorAll('td')[0].textContent === pp) {
-                return row;
-            }
-        }
-    }
-
-    /*--------/
-    -Stylings-
-    /-------*/
-    function styleElements() {
-        styleParentDiv();
-        styleMainDiv();
-        styleArrows();
-        styleSettingsBtn();
-        styleSettingsDiv();
-        styleLists();
-        removeLiStyle();
-        styleTables();
-    }
-
-    function styleParentDiv() {
-        const parentDiv = document.getElementsByClassName('awsui-row')[0];
-        parentDiv.style.display = 'flex';
-    }
-
-    function styleMainDiv() {
-        const mainDiv = document.getElementById('main-div');
-        mainDiv.style.minWidth = '75%'; 
-        mainDiv.style.boxSizing = 'border-box';
-        mainDiv.style.boxShadow = '0 1px 1px 0 rgba(0,28,36,.3), 1px 1px 1px 0 rgba(0,28,36,.3), -1px 1px 1px 0 rgba(0,28,36,.3)';
-        mainDiv.style.borderTop = '1px solid #EAEDED';
-        mainDiv.style.display = 'flex';
-        mainDiv.style.flexDirection = 'column';
-        mainDiv.style.padding = '2rem';
-        mainDiv.style.marginLeft = '1rem';
-
-        const topDiv = document.getElementById('top-div');
-        topDiv.style.display = 'flex';
-        topDiv.style.gap = '2rem';
-        topDiv.style.justifyContent = 'end';
-    }
-
-    function styleArrows() {
-        const arrows = Array.from(document.getElementsByClassName('arrow-toggle'));
-        arrows.forEach(arrow => {
-                arrow.style.fontSize = '1.5rem';
-                arrow.style.color = '#645e5e';
-                arrow.style.backgroundColor = 'transparent';
-                arrow.style.border = 'none';
-                arrow.style.display = 'flex';
-                arrow.style.gap = '1rem';
-            })
-        arrows.forEach(arrow => arrow.onmouseover = arrow.style.cursor = 'pointer');
-    }
-
-    function styleSpans() {
-        const spans = Array.from(document.getElementsByName('span'))
-            .forEach(span => {
-                span.style.color = '#0073bb';
-                span.style.fontWeight = 'bold';
-                span.style.fontSize = '1.4rem';
-            });
-    }
-
-    function styleSettingsBtn() {
-        const button = document.getElementById('settings-btn');
-        button.onmouseover = button.style.cursor = 'pointer';
-
-        button.style.height = '5rem';
-        button.style.width = '12rem';
-        button.style.border = '2px solid darkblue';
-        button.style.backgroundColor = '#FDE68A';
-        button.style.fontSize = '1.7rem';
-        button.style.display = 'flex';
-        button.style.flexWrap = 'wrap';
-        button.style.alignItems = 'center';
-    }
-
-    //call this when you click settings button to start displaying it
-    function openOverlay() {
-        const overlay = document.getElementById('overlay');
-        overlay.style.zIndex = '1000';
-        overlay.style.position = 'fixed';
-        overlay.style.top = '0';
-        overlay.style.left = '0';
-        overlay.style.width = '100%';
-        overlay.style.height = '100%';
-        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-        overlay.style.display = 'flex';
-        overlay.style.alignItems = 'center';
-        overlay.style.justifyContent = 'center';
-    }
-
-    function styleSettingsDiv() {
-        const settingsDiv = document.getElementById('settings-div');
-        settingsDiv.style.border = '2px solid black';
-        settingsDiv.style.backgroundColor = '#e4e4e7';
-        settingsDiv.style.display = 'flex';
-        settingsDiv.style.gap = '1rem';
-        settingsDiv.style.minWidth = '40%';
-        settingsDiv.style.borderRadius = '20px';
-
-        const currentPathsDiv = document.getElementById('current-paths-div');
-        currentPathsDiv.style.display = 'flex';
-        currentPathsDiv.style.flexDirection = 'column';
-        currentPathsDiv.style.alignItems = 'center';
-        currentPathsDiv.style.padding = '1rem';
-
-        const pathsDiv = document.getElementById('paths-div');
-        pathsDiv.style.display = 'flex';
-
-        const allPathsDiv = document.getElementById('all-paths-div');
-        allPathsDiv.style.display = 'flex';
-        allPathsDiv.style.flexDirection = 'column';
-        allPathsDiv.style.alignItems = 'center';
-        allPathsDiv.style.borderLeft = '2px solid black';
-        allPathsDiv.style.padding = '1rem 1rem 1rem 2rem';
-
-        const mainSelectionDiv = document.getElementById('main-selection-div');
-        mainSelectionDiv.style.display = 'flex';
-        mainSelectionDiv.style.marginTop = '3rem';
-        mainSelectionDiv.style.gap = '3rem';
-
-        const contentDiv = document.getElementById('selection-div');
-        contentDiv.style.display = 'flex';
-        contentDiv.style.flexDirection = 'column';
-        contentDiv.style.gap = '5rem';
-        contentDiv.style.paddingTop = '2rem';
-
-        const closeBtn = document.getElementById('close-btn');
-        closeBtn.style.position = 'relative';
-        closeBtn.style.top = '10%';
-        closeBtn.style.border = 'none';
-        closeBtn.style.borderRadius = '2rem';
-        closeBtn.style.fontSize = '2rem';
-        closeBtn.style.width = '3.5rem';
-        closeBtn.style.height = '3.5rem';
-        closeBtn.style.color = 'white';
-        closeBtn.style.backgroundColor = '#dc2626';
-
-        closeBtn.onmouseover = closeBtn.style.cursor = 'pointer';
-
-        const removeBtn = document.getElementById('remove-btn');
-        removeBtn.style.backgroundColor = '#EF4444';
-        removeBtn.style.border = '2px solid darkred';
-        removeBtn.style.marginTop = '2rem';
-        removeBtn.style.marginLeft = '1.5rem';
-
-        const ceBtn = document.getElementById('ce-btn');
-        ceBtn.style.backgroundColor = '#3b82f6';
-        ceBtn.style.border = '2px solid blue';
-
-        const tsoBtn = document.getElementById('tso-btn');
-        tsoBtn.style.backgroundColor = '#8B5CF6';
-        tsoBtn.style.border = '2px solid #5B21B6';
-
-        const vretsBtn = document.getElementById('vrets-btn');
-        vretsBtn.style.backgroundColor = '#10B981';
-        vretsBtn.style.border = '2px solid darkgreen';
-
-        //stylings for both main headers
-        const headers = Array.from(document.querySelectorAll('h3'))
-            .forEach(header => header.style.marginLeft = '2rem');
-
-        //common stylings for all three buttons
-        const btns = Array.from(document.getElementsByClassName('settings-btn'));
-        for (let btn of btns) {
-            btn.style.width = '16rem';
-            btn.style.fontSize = '1.7rem';
-            btn.style.fontWeight = 'bold';
-            btn.style.padding = '0.5rem 0 0.5rem 0';
-            btn.style.color = 'white';
-            btn.onmouseover = btn.style.cursor = 'pointer';
-        }
-    }
-
-    function styleLists() {
-        const lists = Array.from(document.querySelectorAll('ul'));
-        for (let list of lists) {
-            list.style.height = '25rem';
-            list.style.overflow = 'scroll';
-            list.style.overflowX = 'hidden';
-            list.style.display = 'flex';
-            list.style.flexDirection = 'column';
-            list.style.backgroundColor = 'white';
-            list.style.padding = '1rem';
-        }
-    }
-
-    function removeLiStyle() {
-        const lis = Array.from(document.querySelectorAll('li')) 
-            .forEach(li => li.style.listStyle = 'none');
-    }
-
-    function styleSelectedLi() {
-        const lis = Array.from(document.querySelectorAll('li'));
-        lis.forEach(li => li.addEventListener('click', (e) => {
-            for (let li of lis) {
-                if (e.target === li) {
-                    //if the li has not been selected, highlight it and set current selection to this li
-                    if (!e.target.classList.contains('selected')) {
-                        e.target.style.backgroundColor = 'darkblue';
-                        e.target.style.color = 'white';
-                        e.target.classList.add('selected');
-                        if (li.classList.contains('current-path')) {
-                            currentAssignedSelection = e.target.textContent;
-                            currentAssignedList = e.target.parentElement.id;
-                            currentFreeSelection = '';
-                        } else {
-                            currentFreeSelection = e.target.textContent;
-                            currentAssignedSelection = '';
-                            currentAssignedList = '';
+    function makeRequest(link) {
+        return new Promise((resolve) => {
+            GM.xmlHttpRequest ({
+                    method: "GET",
+                    url: link,
+                    onreadystatechange: function(response) {
+                        if(response.readyState == 4 && response.status == 200) {
+                            resolve(this.response);
                         }
-                    } else {
-                        //if the li has already been selected, deselect it and remove li from current selection
-                        e.target.style.backgroundColor = 'white';
-                        e.target.style.color = 'black';
-                        e.target.classList.remove('selected');
-                        currentAssignedSelection = '';
-                        currentFreeSelection = '';
-                        currentAssignedList = '';
                     }
-                } else {
-                    //update all other li's to not be highlighted
-                    li.style.backgroundColor = 'white';
-                    li.style.color = 'black';
-                    li.classList.remove('selected');
-                }
-            }
-        }))
-    }
-
-    function clearSelectedPath() {
-        const lis = Array.from(document.querySelectorAll('li'));
-        lis.forEach(li => li.classList.remove('selected'));
-        currentFreeSelection = '';
-        currentAssignedSelection = '';
-    }
-
-    function styleTables() {
-        const tables = document.querySelectorAll('table');
-        tables.forEach(table => {
-            table.style.textAlign = 'center';
-            table.style.borderCollapse = 'collapse';
-            table.style.margin = '1rem 2rem';
-
-            const tds = Array.from(table.getElementsByClassName('row-td'));
-            tds.forEach(td => {
-                td.style.border = '1px solid black';
-                td.style.padding = '3px 5px';
-            })
-
-            const rows = Array.from(table.getElementsByClassName('path-row'));
-            for (let i = 0; i < rows.length; i++) {
-                if (i % 2 !== 0) {
-                    rows[i].style.backgroundColor = 'white';
-                }
-            }
-        })
-
-        const links = document.querySelectorAll('a');
-        links.forEach(a => {
-            a.onmouseover = () => {
-                a.style.cursor = 'pointer';
-                a.style.color = 'blue';
-                a.style.borderBottom = '1px solid blue';
-            } 
-            a.onmouseleave = () => {
-                a.style.color = 'black';
-                a.style.border = 'none';
-            }
-            a.style.textDecoration = 'none';
-            a.style.color = 'black';
+                })
         })
     }
-};
+
+    function makeAnchorElement(link, wp) {
+        const a = document.createElement('a');
+        a.setAttribute('href', link)
+        a.innerHTML = wp;
+        return a;
+    }
+
+    /*
+    ---styling elements---
+    */
+    function styleTable(table) {
+        // table.style.border = '2px solid black';
+        const tds = Array.from(table.querySelectorAll('td'));
+        tds.forEach(td => td.style.textAlign = 'center');
+        tds.forEach(td => td.style.padding = '0 0.5rem 0 0.5rem');
+        const ths = Array.from(table.querySelectorAll('th'));
+        ths.forEach(th => th.style.textAlign = 'center');
+
+        //using arrays as each table has different columns and going by query selector will throw an error
+        const scannableIdColumns = Array.from(table.getElementsByClassName('scannable-id'))
+            .forEach(column => column.style.width = '10rem');
+
+        const processPathColumns = Array.from(table.getElementsByClassName('process-path'))
+            .forEach(column => column.style.width = '10rem');
+
+        const workPoolColumns = Array.from(table.getElementsByClassName('work-pool'))
+            .forEach(column => column.style.width = '3rem');
+
+        const quantityColumns = Array.from(table.getElementsByClassName('quantity'))
+            .forEach(column => column.style.width = '5rem');
+
+        const dwellTimeColumns = Array.from(table.getElementsByClassName('dwell-time'))
+            .forEach(column => column.style.width = '3rem');
+
+        const batchIdColumns = Array.from(table.getElementsByClassName('batch-id'))
+            .forEach(column => column.style.width = '2rem');
+    }
+
+
+    //can only dynamically style after divs have been created 
+    function styleDivs() {
+        styleSideBar();
+        styleContentDiv();
+        styleMainDisplayDiv();
+        styleTableDivs();
+        styleTableHeaders();
+        styleSummary();
+    }
+
+    function styleSideBar() {
+        const sideBar = document.getElementById('sidebar');
+        sideBar.style.display = 'flex';
+        sideBar.style.flexDirection = 'column';
+        sideBar.style.gap = '1rem';
+    }
+
+    function styleContentDiv() {
+        const contentDiv = document.getElementById('content-div');
+        contentDiv.setAttribute('id', 'content-div');
+        contentDiv.style.display = 'flex';
+        contentDiv.style.flexWrap = 'wrap';
+        contentDiv.style.gap = '3rem';
+        contentDiv.style.alignItems = 'flex-start';
+    }
+
+    function styleMainDisplayDiv() {
+        const div = document.getElementById('main-display-div');
+        div.style.display = 'flex';
+        div.style.gap = '1rem';
+    }
+
+    function styleTableDivs() {
+        const divs = Array.from(document.querySelectorAll('.table-div'));
+        for (let div of divs) {
+            div.style.display = 'flex';
+            div.style.justifyContent = 'center';
+            div.style.border = '2px solid black';
+            div.style.padding = '1rem';
+            div.style.borderRadius = '0.3rem';
+        }
+    }
+
+    function styleTableHeaders() {
+        const headers = Array.from(document.querySelectorAll('.table-header'));
+        for (let header of headers) {
+            header.style.fontSize = '1.1rem';
+            header.style.borderBottom = '2px solid black';
+        }
+    }
+
+    function load() {
+        makeMainDisplayDiv();
+        styleDivs();
+        makeQuickLinksDiv();
+    }
+
+    function styleSummary() {
+        const table = document.getElementById('summary-table');
+        const tds = table.querySelectorAll('td');
+        for (let td of tds) {
+            td.style.textAlign = 'center';
+        }
+    }
+
+    load();
+    
+})();
