@@ -21,13 +21,15 @@ This plugin is designed to replace OWL which is used by CF (Central Flow) and FC
 **How it works**:
 The plugin utilizes localStorage API to store the user's preferences for what paths to track and in which categories. The first time a user loads into the page, no paths will display. Users can click on the settings tab to choose which paths will display. Categories are CE (customer experience), TSO (transship out), and Vrets (vendor returns). Once a user chooses their paths to display, local storage will save these preferences for future sessions. 
 
-Local storage organizes keys by pulling the fc code from the URL. It then creates three key categories: ${fc}-ce, ${fc}-tso, and ${fc}-vrets. When a user adds or removes a path to/from a category, an array for that category is updated for those changes and pushed to local storage. Whenever FC Console is loaded in, paths will automatically populate by accessing local storage. Keys are saved as JSON-stringified arrays and are accessed as JSON-parsed strings. 
+Local storage organizes keys by pulling the fc code from the URL. It then creates three key categories: (fc)-ce, (fc)-tso, and (fc)-vrets. When a user adds or removes a path to/from a category, an array for that category is updated for those changes and pushed to local storage. Whenever FC Console is loaded in, paths will automatically populate by accessing local storage. Keys are saved as JSON-stringified arrays and are accessed as JSON-parsed strings. 
 
 Local storage was chosen as the preferences will save session to session. This allows the user to choose which paths to put into which categories for their own tracking. Rodeo was not used to pull paths as Rodeo is dynamically created and it is not possible to fetch paths from Rodeo with XMLHttpRequests or by using the Fetch API. 
 
-FC Console has an API that shows all path settings. Upon load, the plugin will first fetch the JSON data for all process paths. After, it will check in one second intervals until the DOM is fully loaded. Once it is loaded, the rest of the plugin's functions will execute. An interval is used because FC Console is also dynamically generated and needs time to load elements. ReadyStateChange and window/document.loaded have been tested and do not work. 
+The plugin fetches two FC Console APIs. The first is a path settings API that has all set statuses, TURs, batch limits, and PRAs for each process path. The second API is active batches which shows all active batches in which process path. 
 
-Once the plugin function runs, the DOM will be loaded and the tables will populate data using set data from the API and actual data from the same page in FC Console. Also on load, only the CE table will display. The TSO and Vrets tables can be toggled. This is to keep focus on the customer and is the most value-added category.
+Upon load, the plugin will first fetch the JSON data for all process paths. Then it will fetch the JSON data for active batches. After these promises resolve, the rest of the script will load in.
+
+Once the plugin function runs, the DOM will be loaded and the tables will populate data using set data from the APIs and actual data from the same page in FC Console. Also on load, only the CE table will display. The TSO and Vrets tables can be toggled. This is to keep focus on the customer and is the most value-added category.
 
 On load: 
 ![image](https://user-images.githubusercontent.com/104536361/216234274-e03831fe-d58e-46b8-9acf-db14c189c5b9.png)
