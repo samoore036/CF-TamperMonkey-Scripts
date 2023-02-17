@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      1.0
+// @version      2.0
 // @description  Display set rates, TURs, and hcs vs actuals to increase visibility of pick hc deviations
 // @author       mooshahe
 // @match        https://picking-console.na.picking.aft.a2z.com/fc/*/process-paths
