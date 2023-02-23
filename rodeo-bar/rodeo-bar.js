@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Rodeo Bar
-// @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/rodeo-bar/rodeo-bar.js
-// @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/rodeo-bar/rodeo-bar.js 
+// @updateURL    https://raw.githubusercontent.com/samoore036/CF-TamperMonkey-Scripts/main/rodeo-bar/rodeo-bar.js
+// @downloadURL  https://raw.githubusercontent.com/samoore036/CF-TamperMonkey-Scripts/main/rodeo-bar/rodeo-bar.js
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      3.0
+// @version      2.1.0
 // @description  Rodeo resource bar to display metrics to increase visibility for CF leads and sites alike
 // @author       mooshahe
 // @match        https://rodeo-iad.amazon.com/*/ExSD*
@@ -15,7 +15,6 @@
 (function() {
     'use strict';
 
-    alert('test');
     const fc = document.getElementById("fcpn-site-input").value;
 
     //Thresholds - TNS/ARNS
@@ -75,7 +74,7 @@
     function makeWipDiv() {
         let totWip, rebinBuffered, sorted, induct
         let newDiv = document.createElement('div');
-        
+
         const pickingPicked = document.getElementById('PickingPickedTable').getElementsByClassName('grand-total')[0].getElementsByClassName('subtotal')[0].textContent.trim();
         if (document.getElementById('RebinBufferedTable') === null) {
             rebinBuffered = 0;
@@ -99,7 +98,7 @@
             totWip = parseInt(pickingPicked) + parseInt(rebinBuffered) + parseInt(sorted);
             newDiv.textContent = `Total WIP: ${totWip} | PP: ${pickingPicked} | Rebin: ${rebinBuffered} | Sorted: ${sorted}`;
         }
-        
+
         styleDiv(newDiv);
         return newDiv;
     }
@@ -112,7 +111,7 @@
         } else {
             psolveTot = document.getElementById('ProblemSolvingTable').getElementsByClassName('grand-total')[0].getElementsByClassName('subtotal')[0].textContent.trim();
         }
-        
+
         let newDiv = document.createElement('div');
         let style = newDiv.style;
         if (parseInt(psolveTot) < psThreshold * .8) {
@@ -137,7 +136,7 @@
         } else {
             scannedTot = document.getElementById('ScannedTable').getElementsByClassName('grand-total')[0].getElementsByClassName('subtotal')[0].textContent.trim();
         }
-        
+
         let newDiv = document.createElement('div');
         let style = newDiv.style;
         if (parseInt(scannedTot) < scannedThreshold * .8) {
