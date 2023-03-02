@@ -1214,7 +1214,10 @@ function loadScript(data) {
 
     //api does not contain actual rate. it is calculated by UPH/active pickers
     function getActualRate(TUR, activePickers) {
-        return Math.round(TUR / activePickers);
+        if (parseInt(TUR) === 0) {
+            return 'N/A';
+        }
+        return Math.round(parseInt(TUR) / parseInt(activePickers));
     }
 
     //find the process path obj in activeData api
