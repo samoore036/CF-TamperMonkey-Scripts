@@ -25,11 +25,11 @@ Local storage organizes keys by pulling the fc code from the URL. It then create
 
 Local storage was chosen as the preferences will save session to session. This allows the user to choose which paths to put into which categories for their own tracking. Rodeo was not used to pull paths as Rodeo is dynamically created and it is not possible to fetch paths from Rodeo with XMLHttpRequests or by using the Fetch API. 
 
-The plugin fetches two FC Console APIs. The first is a path settings API that has all set statuses, TURs, batch limits, and PRAs for each process path. The second API is active batches which shows all active batches in which process path. 
+The plugin fetches three FC Console APIs. The first is an active path settings API that pulls current HCs and TURs. The second is a set path settings that pulls path status, set TURs, batch limits, and set PRAs for each process path. The third API is active batches which shows all active batches in which process path. 
 
-Upon load, the plugin will first fetch the JSON data for all process paths. Then it will fetch the JSON data for active batches. After these promises resolve, the rest of the script will load in.
+Upon load, the plugin will first fetch the active data for all process paths. Then it will fetch the set data for all process paths. Then it will fetch the data for the active batches. After these promises resolve, the rest of the script will load in.
 
-Once the plugin function runs, the DOM will be loaded and the tables will populate data using set data from the APIs and actual data from the same page in FC Console. Also on load, only the CE table will display. The TSO and Vrets tables can be toggled. This is to keep focus on the customer and is the most value-added category.
+Once the plugin function runs, the DOM will be loaded and the tables will populate data using data from the APIs. Also on load, only the CE table will display. The TSO and Vrets tables can be toggled. This is to keep focus on the customer and is the most value-added category.
 
 On load: 
 ![image](https://user-images.githubusercontent.com/104536361/216234274-e03831fe-d58e-46b8-9acf-db14c189c5b9.png)
