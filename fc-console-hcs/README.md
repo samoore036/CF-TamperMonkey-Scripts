@@ -1,20 +1,7 @@
 **Purpose:**
 This plugin is designed to replace OWL which is used by CF (Central Flow) and FCs alike to track actual pick hcs in FC Console against set TURs. With CF transitioning to 2 to 1, this plugin was made to reduce external applications and keep all relevant tools centralized in existing web tools. By attaching this plugin to the top of FC Console, the goal is to increase visibility of actual vs set pick settings to increase staffing to plan metrics.
 
-**Setup:**
-1. On the main process path page of FC Console, click on settings.
-
-![image](https://user-images.githubusercontent.com/104536361/216234543-ca1741fb-bf14-42f3-b4fb-bb6b36db577d.png)
-
-2. Select ALL under Page Size
-
-![image](https://user-images.githubusercontent.com/104536361/216234682-bbe5ec93-c986-42be-ab85-e449039a1876.png)
-
-3. Also under settings, ensure every column is visible
-
-![image](https://user-images.githubusercontent.com/104536361/216234736-4ec3e995-9472-4ae7-ae6b-60e712effa5c.png)
-
-4. Click confirm, reload and it will start working.
+**Setup**: Download the tampermonkey plugin. Click on fc-console-hcs.js then click 'Raw' near the top right. Copy and paste this information as a new script in tampermonkey.
 
 **Note**: To get latest data, you must either refresh or use the auto refresh option.
 
