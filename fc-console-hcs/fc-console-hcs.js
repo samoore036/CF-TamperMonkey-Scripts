@@ -3,10 +3,10 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      2.0
+// @version      3.0
 // @description  Display set rates, TURs, and hcs vs actuals to increase visibility of pick hc deviations
 // @author       mooshahe
-// @match        https://picking-console.na.picking.aft.a2z.com/fc/*/process-paths
+// @match        https://picking-console.na.picking.aft.a2z.com/fc/*
 // @grant        GM.xmlHttpRequest
 // @connect      process-path.na.picking.aft.a2z.com
 // @connect      insights.prod-na.pack.aft.a2z.com
@@ -19,8 +19,22 @@ fc console is dynamically generated so must wait until it is completely loaded
 
 let fc = document.URL.split('/')[4];
 
-//two requests to be made: get set process path data and get active batches
-const ppData = new Promise(function(resolve) {
+//three requests to be made: get active process path data, get set process path data and get active batches
+const activeData = new Promise(function(resolve) {
+    GM.xmlHttpRequest({
+        method: 'GET',
+        url: `https://picking-console.na.picking.aft.a2z.com/api/fcs/${fc}/process-paths/information`,
+        onreadystatechange: function(response) {
+            if (response.readyState == 4 && response.status == 200) {
+                resolve(this.response);
+            } else {
+                console.log('did not get active data');
+            }
+        }
+    })
+})
+
+const setData = new Promise(function(resolve) {
         GM.xmlHttpRequest({
             method: "GET",
             url: `https://process-path.na.picking.aft.a2z.com/api/processpath/${fc}/processPathWithUserSettingsList`,
@@ -28,7 +42,7 @@ const ppData = new Promise(function(resolve) {
                 if (response.readyState == 4 && response.status == 200) {
                     resolve(this.response);
                 }  else {
-                    console.log('did not get process path data');
+                    console.log('did not get set data');
                 }
             }
         })
@@ -49,7 +63,7 @@ const batchData = new Promise(function(resolve) {
 })
 
 //after data is retrieved for set process paths, get active batch data, then wait until DOM is loaded then execute script
-Promise.all([ppData, batchData]).then((data) => {
+Promise.all([activeData, setData, batchData]).then((data) => {
     let interval = setInterval(() => {
         if (document.getElementById('awsui-expandable-section-6') != null) {
             clearInterval(interval);
@@ -68,16 +82,15 @@ function loadScript(data) {
     let activePickersTotal = 0;
     let setPickersTotal = 0;
 
-    const ppData = JSON.parse(data[0]).processPaths; //gives an array of all process paths with set settings
-    const batchData = JSON.parse(data[1]).pickBatchInformationList;
-
-    console.log(batchData);
+    const activeData = JSON.parse(data[0]).processPathInformationMap;
+    const setData = JSON.parse(data[1]).processPaths; //gives an array of all process paths with set settings
+    const batchData = JSON.parse(data[2]).pickBatchInformationList;
 
     /*---------------------------/
     -local storage functionality-
     /--------------------------*/
-    /*
 
+    /*
     initialize localstorage if it has not been created yet
     localstorage keys per site are fc-ce, fc-tso, fc-vrets
     */
@@ -472,11 +485,7 @@ function loadScript(data) {
     }
 
     function loadAllFreePaths(list) {
-        //iterate through all process paths on the main page and filter out those that are also in local storage
-        const rows = Array.from(document.getElementsByClassName('awsui-table-row'));
-        const pps = rows.map(row => row.querySelectorAll('td')[0].textContent);
-        pps.sort();
-        for (let pp of pps) {
+        for (const pp in activeData) {
             if (!isCurrentPath(pp)) {
                 list.appendChild(makeLi(list, pp));
             }
@@ -490,15 +499,13 @@ function loadScript(data) {
 
         const newList = document.createElement('ul');
         newList.setAttribute('id', 'all-paths-list');
-        const rows = Array.from(document.getElementsByClassName('awsui-table-row'));
-        const pps = rows.map(row => row.querySelectorAll('td')[0].textContent);
-        pps.sort();
-        for (let pp of pps) {
+        
+        for (const pp in activeData) {
             if (!isCurrentPath(pp)) {
                 newList.appendChild(makeLi(newList, pp));
             }
         }
-
+        
         div.appendChild(newList);
         styleElements();
     }
@@ -1061,7 +1068,7 @@ function loadScript(data) {
         }
         row.appendChild(turTd);
 
-        row.appendChild(makeTd(getActualRate(pp)));
+        row.appendChild(makeTd(getActualRate(getActualTur(pp), getActivePickers(pp))));
         row.appendChild(makeTd(pra));
 
         const statusTd = makeTd(setData.status);
@@ -1166,7 +1173,7 @@ function loadScript(data) {
 
     //return api path object to get access to all attributes
     function getPathApi(pp) {
-        for (let path of ppData) {
+        for (let path of setData) {
             if (path.processPathName === pp) {
                 return path;
             }
@@ -1174,14 +1181,15 @@ function loadScript(data) {
     }
 
     function getActivePickers(pp) {
-        let row = getProcessPath(pp);
+        let path = getProcessPath(pp);
+        let activePickers = activeData[path].PickerCount;
 
+        //do not count HOV pickers as part of active picker total
         if (!pp.includes('HOV')) {
-            let number = parseInt(row.querySelectorAll('td')[9].textContent);
-            activePickersTotal += number;
+            activePickersTotal += parseInt(activePickers);
         }
 
-        return row.querySelectorAll('td')[9].textContent;
+        return activePickers;
     }
 
     function getActiveBatches(pp) {
@@ -1200,21 +1208,20 @@ function loadScript(data) {
     }
 
     function getActualTur(pp) {
-        let row = getProcessPath(pp);
-        return row.querySelectorAll('td')[10].textContent;
+        let path = getProcessPath(pp);
+        return activeData[path].UnitsPerHour;
     }
 
-    function getActualRate(pp) {
-        let row = getProcessPath(pp);
-        return Math.round(row.querySelectorAll('td')[11].textContent);
+    //api does not contain actual rate. it is calculated by UPH/active pickers
+    function getActualRate(TUR, activePickers) {
+        return Math.round(TUR / activePickers);
     }
 
-    //find the process path in fc console to get all of the actual data
+    //find the process path obj in activeData api
     function getProcessPath(pp) {
-        const rows = document.getElementsByClassName('awsui-table-row');
-        for (let row of rows) {
-            if (row.querySelectorAll('td')[0].textContent === pp) {
-                return row;
+        for (const path in activeData) {
+            if (path === pp) {
+                return path;
             }
         }
     }
