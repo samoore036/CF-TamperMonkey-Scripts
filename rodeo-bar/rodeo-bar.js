@@ -3,7 +3,7 @@
 // @updateURL    https://raw.githubusercontent.com/samoore036/CF-TamperMonkey-Scripts/main/rodeo-bar/rodeo-bar.js
 // @downloadURL  https://raw.githubusercontent.com/samoore036/CF-TamperMonkey-Scripts/main/rodeo-bar/rodeo-bar.js
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      2.1.0
+// @version      2.2.0
 // @description  Rodeo resource bar to display metrics to increase visibility for CF leads and sites alike
 // @author       mooshahe
 // @match        https://rodeo-iad.amazon.com/*/ExSD*
@@ -155,8 +155,15 @@
 
     //pickable is RTP TOT + PNYP TOT - RTP NP TOT - PNYP NP TOT
     function makePickableDiv() {
-        const rtpTot = document.getElementById('ReadyToPickTable').getElementsByClassName('grand-total')[0].getElementsByClassName('subtotal')[0].textContent.trim();
-        const rtpNpTot = document.getElementById('ReadyToPickHardCappedTable').getElementsByClassName('grand-total')[0].getElementsByClassName('subtotal')[0].textContent.trim();
+        let rtpTot, rtpNpTot;
+        if (!document.getElementById('ReadyToPickTable')) {
+            rtpTot = 0;
+            rtpNpTot = 0;
+        } else {
+            rtpTot = document.getElementById('ReadyToPickTable').getElementsByClassName('grand-total')[0].getElementsByClassName('subtotal')[0].textContent.trim();
+            rtpNpTot = document.getElementById('ReadyToPickHardCappedTable').getElementsByClassName('grand-total')[0].getElementsByClassName('subtotal')[0].textContent.trim();
+        }
+        
         const pnypTot = document.getElementById('PickingNotYetPickedTable').getElementsByClassName('grand-total')[0].getElementsByClassName('subtotal')[0].textContent.trim();
         const pnypNpTot = document.getElementById('PickingNotYetPickedHardCappedTable').getElementsByClassName('grand-total')[0].getElementsByClassName('subtotal')[0].textContent.trim();
         const pickable = parseInt(rtpTot) + parseInt(pnypTot) - parseInt(rtpNpTot) - parseInt(pnypNpTot);
