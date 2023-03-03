@@ -1029,6 +1029,12 @@ function loadScript(data) {
         }
         const activePickers = getActivePickers(pp);
 
+        //do not count HOV pickers as part of active picker total
+        if (!pp.includes('HOV')) {
+            console.log(`active pickers total before adding: ${activePickersTotal} in ${pp}`);
+            activePickersTotal += parseInt(activePickers);
+        }
+        
         //do not count pp in set pickers total if it's an HOV path as HOV default hc is 10 which is always inaccurate
         if (!pp.includes('HOV')) {
             let number = parseInt(setPickers)
@@ -1183,11 +1189,6 @@ function loadScript(data) {
     function getActivePickers(pp) {
         let path = getProcessPath(pp);
         let activePickers = activeData[path].PickerCount;
-
-        //do not count HOV pickers as part of active picker total
-        if (!pp.includes('HOV')) {
-            activePickersTotal += parseInt(activePickers);
-        }
 
         return activePickers;
     }
