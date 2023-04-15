@@ -1166,15 +1166,16 @@ function loadScript(data) {
         ppTd.style.textAlign = 'left';
         row.appendChild(ppTd);
 
-        // take 10 off of TUR as set pickers will round up and this will offset over counting by 1 from testing
-        const tur = parseInt(setData.unitRateTarget) - 10; 
+        
+        const tur = setData.unitRateTarget; 
         const pra = setData.pickRateAverage;
 
         let setPickers;
         if (tur === 0 || pra === 0) {
             setPickers = 0;
         } else {
-            setPickers = Math.ceil(tur/pra); //api does not have planned pickers so it is calculated by TUR/pick rate average
+            // take 10 off of TUR as set pickers will round up and this will offset over counting by 1 from testing
+            setPickers = Math.ceil((parseInt(tur - 10))/pra); //api does not have planned pickers so it is calculated by TUR/pick rate average
         }
         const activePickers = getActivePickers(pp);
 
