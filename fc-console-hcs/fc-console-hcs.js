@@ -1166,7 +1166,8 @@ function loadScript(data) {
         ppTd.style.textAlign = 'left';
         row.appendChild(ppTd);
 
-        const tur = setData.unitRateTarget;
+        // take 10 off of TUR as set pickers will round up and this will offset over counting by 1 from testing
+        const tur = parseInt(setData.unitRateTarget) - 10; 
         const pra = setData.pickRateAverage;
 
         let setPickers;
