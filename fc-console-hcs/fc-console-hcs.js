@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      3.0
+// @version      4.0
 // @description  Display set rates, TURs, and hcs vs actuals to increase visibility of pick hc deviations
 // @author       mooshahe
 // @match        https://picking-console.na.picking.aft.a2z.com/fc/*
@@ -81,6 +81,10 @@ function loadScript(data) {
 
     let activePickersTotal = 0;
     let setPickersTotal = 0;
+    let activeMultisTotal = 0;
+    let setMultisTotal = 0;
+    let activeSinglesTotal = 0;
+    let setSinglesTotal = 0;
 
     const activeData = JSON.parse(data[0]).processPathInformationMap;
     const setData = JSON.parse(data[1]).processPaths; //gives an array of all process paths with set settings
@@ -620,6 +624,93 @@ function loadScript(data) {
         return div;
     }
 
+    function makeMultisSummaryDiv() {
+        const div = document.createElement('div');
+        div.title = 'Includes all multis paths listed above';
+        div.style.cssText += `
+        cursor: help; display: flex; align-items: center; gap: 1vw;
+        border: 2px solid black;
+        `
+        const titleDiv = document.createElement('div');
+        titleDiv.textContent = 'Multis Totals';
+        titleDiv.style.cssText += `
+        border-right: 2px solid black;
+        height: 100%;
+        line-height:100px;
+        padding-left: 0.5vw;
+        padding-right: 0.5vw;
+        `
+        div.appendChild(titleDiv);
+
+        const categoryDivs = document.createElement('div');
+        categoryDivs.style.cssText += `
+        display: flex; flex-direction: column;
+        padding-right: 0.5vw;
+        `
+        const activeTotalDiv = document.createElement('div');
+        activeTotalDiv.setAttribute('id', 'multis-active-div');
+        categoryDivs.appendChild(activeTotalDiv);
+
+        const setTotalDiv = document.createElement('div');
+        setTotalDiv.setAttribute('id', 'multis-set-div');
+        categoryDivs.appendChild(setTotalDiv);
+
+        const deltaDiv = document.createElement('div');
+        deltaDiv.setAttribute('id', 'multis-delta-div');
+        categoryDivs.appendChild(deltaDiv);
+
+        const deviationDiv = document.createElement('div');
+        deviationDiv.setAttribute('id', 'multis-deviation-div');
+        categoryDivs.appendChild(deviationDiv);
+        div.appendChild(categoryDivs);
+
+        return div;
+    }
+
+    function makeSinglesSummaryDiv() {
+        const div = document.createElement('div');
+        div.title = 'Includes all paths listed above that are not multis or HOV';
+        div.style.cssText += `
+        cursor: help; display: flex; align-items: center; gap: 1vw;
+        border: 2px solid black;
+        `
+        const titleDiv = document.createElement('div');
+        titleDiv.textContent = 'Singles Totals';
+        titleDiv.style.cssText += `
+        border-right: 2px solid black;
+        height: 100%;
+        line-height:100px;
+        padding-left: 0.5vw;
+        padding-right: 0.5vw;
+        `
+        div.appendChild(titleDiv);
+        
+        const categoryDivs = document.createElement('div');
+        categoryDivs.style.cssText += `
+        display: flex; flex-direction: column;
+        padding-right: 0.5vw;
+        `
+        categoryDivs.style.cssText += 'display: flex; flex-direction: column;'
+        const activeTotalDiv = document.createElement('div');
+        activeTotalDiv.setAttribute('id', 'singles-active-div');
+        categoryDivs.appendChild(activeTotalDiv);
+
+        const setTotalDiv = document.createElement('div');
+        setTotalDiv.setAttribute('id', 'singles-set-div');
+        categoryDivs.appendChild(setTotalDiv);
+
+        const deltaDiv = document.createElement('div');
+        deltaDiv.setAttribute('id', 'singles-delta-div');
+        categoryDivs.appendChild(deltaDiv);
+
+        const deviationDiv = document.createElement('div');
+        deviationDiv.setAttribute('id', 'singles-deviation-div');
+        categoryDivs.appendChild(deviationDiv);
+        div.appendChild(categoryDivs);
+
+        return div;
+    }
+
     function makeTableDiv(category) {
         const div = document.createElement('div');
         div.setAttribute('id', `${category}-table-div`);
@@ -639,7 +730,7 @@ function loadScript(data) {
         const titleHeader = document.createElement('th');
         titleHeader.classList.add('table-header');
         titleHeader.textContent = 'CE Paths';
-        titleHeader.colSpan = '10';
+        titleHeader.colSpan = '11';
         titleRow.appendChild(titleHeader);
         ceTable.appendChild(titleRow);
 
@@ -653,23 +744,27 @@ function loadScript(data) {
         const td1 = makeHeaderTd('Process Path');
         categoriesRow.appendChild(td1);
         const td2 = makeHeaderTd('BL/Active');
+        td2.title = 'Batch Limit/Current active batches';
+        td2.style.cursor = 'help';
         categoriesRow.appendChild(td2);
         const td3 = makeHeaderTd('Active Pickers');
         categoriesRow.appendChild(td3);
-        const td4 = makeHeaderTd('Set Pickers');
+        const td4 = makeHeaderTd('Planned Pickers');
         categoriesRow.appendChild(td4);
         const td5 = makeHeaderTd('Delta');
         categoriesRow.appendChild(td5);
-        const td6 = makeHeaderTd('Actual TUR');
+        const td6 = makeHeaderTd('Deviation');
         categoriesRow.appendChild(td6);
-        const td7 = makeHeaderTd('Set TUR');
+        const td7 = makeHeaderTd('Actual TUR');
         categoriesRow.appendChild(td7);
-        const td8 = makeHeaderTd('Actual Rate');
+        const td8 = makeHeaderTd('Set TUR');
         categoriesRow.appendChild(td8);
-        const td9 = makeHeaderTd('Set Rate');
+        const td9 = makeHeaderTd('Actual Rate');
         categoriesRow.appendChild(td9);
-        const td10 = makeHeaderTd('Status');
+        const td10 = makeHeaderTd('Set Rate');
         categoriesRow.appendChild(td10);
+        const td11 = makeHeaderTd('Status');
+        categoriesRow.appendChild(td11);
         ceTable.appendChild(categoriesRow);
 
         return ceTable;
@@ -687,7 +782,7 @@ function loadScript(data) {
         const titleHeader = document.createElement('th');
         titleHeader.classList.add('table-header');
         titleHeader.textContent = 'TSO Paths';
-        titleHeader.colSpan = '8';
+        titleHeader.colSpan = '9';
         titleRow.appendChild(titleHeader);
         tsoTable.appendChild(titleRow);
 
@@ -704,16 +799,22 @@ function loadScript(data) {
         categoriesRow.appendChild(td2);
         const td3 = makeHeaderTd('Active Pickers');
         categoriesRow.appendChild(td3);
-        const td4 = makeHeaderTd('Set Pickers');
+        const td4 = makeHeaderTd('Planned Pickers');
         categoriesRow.appendChild(td4);
         const td5 = makeHeaderTd('Delta');
         categoriesRow.appendChild(td5);
-        const td6 = makeHeaderTd('Actual TUR');
+        const td6 = makeHeaderTd('Deviation');
         categoriesRow.appendChild(td6);
-        const td7 = makeHeaderTd('Set TUR');
+        const td7 = makeHeaderTd('Actual TUR');
         categoriesRow.appendChild(td7);
-        const td8 = makeHeaderTd('Status');
+        const td8 = makeHeaderTd('Set TUR');
         categoriesRow.appendChild(td8);
+        const td9 = makeHeaderTd('Actual Rate');
+        categoriesRow.appendChild(td9);
+        const td10 = makeHeaderTd('Set Rate');
+        categoriesRow.appendChild(td10);
+        const td11 = makeHeaderTd('Status');
+        categoriesRow.appendChild(td11);
         tsoTable.appendChild(categoriesRow);
 
         return tsoTable;
@@ -731,7 +832,7 @@ function loadScript(data) {
         const titleHeader = document.createElement('th');
         titleHeader.classList.add('table-header');
         titleHeader.textContent = 'Vrets Paths';
-        titleHeader.colSpan = '8';
+        titleHeader.colSpan = '9';
         titleRow.appendChild(titleHeader);
         vretsTable.appendChild(titleRow);
 
@@ -748,16 +849,22 @@ function loadScript(data) {
         categoriesRow.appendChild(td2);
         const td3 = makeHeaderTd('Active Pickers');
         categoriesRow.appendChild(td3);
-        const td4 = makeHeaderTd('Set Pickers');
+        const td4 = makeHeaderTd('Planned Pickers');
         categoriesRow.appendChild(td4);
         const td5 = makeHeaderTd('Delta');
         categoriesRow.appendChild(td5);
-        const td6 = makeHeaderTd('Actual TUR');
+        const td6 = makeHeaderTd('Deviation');
         categoriesRow.appendChild(td6);
-        const td7 = makeHeaderTd('Set TUR');
+        const td7 = makeHeaderTd('Actual TUR');
         categoriesRow.appendChild(td7);
-        const td8 = makeHeaderTd('Status');
+        const td8 = makeHeaderTd('Set TUR');
         categoriesRow.appendChild(td8);
+        const td9 = makeHeaderTd('Actual Rate');
+        categoriesRow.appendChild(td9);
+        const td10 = makeHeaderTd('Set Rate');
+        categoriesRow.appendChild(td10);
+        const td11 = makeHeaderTd('Status');
+        categoriesRow.appendChild(td11);
         vretsTable.appendChild(categoriesRow);
 
         return vretsTable;
@@ -766,6 +873,10 @@ function loadScript(data) {
     function loadTables() {
         activePickersTotal = 0;
         setPickersTotal = 0;
+        activeMultisTotal = 0;
+        setMultisTotal = 0;
+        activeSinglesTotal = 0;
+        setSinglesTotal = 0;
 
         const ceTableDiv = document.getElementById('ce-table-div');
         let prevCeDisplay;
@@ -773,10 +884,18 @@ function loadScript(data) {
             prevCeDisplay = document.getElementById('ce-table').style.display;
             document.getElementById('pick-totals-div').remove();
             document.getElementById('ce-table').remove();
+            document.getElementById('summary-div').remove();
         }
         ceTableDiv.appendChild(makeTotalsDiv());
         ceTableDiv.appendChild(loadCeTable());
+        const summaryDiv = document.createElement('div');
+        summaryDiv.setAttribute('id', 'summary-div');
+        summaryDiv.style.cssText += `display: flex; gap: 2vw; align-self: center;`
+        summaryDiv.appendChild(makeMultisSummaryDiv());
+        summaryDiv.appendChild(makeSinglesSummaryDiv());
+        ceTableDiv.appendChild(summaryDiv);
         loadTotals();
+
         document.getElementById('ce-table').style.display = prevCeDisplay;
 
         const tsoTableDiv = document.getElementById('tso-table-div');
@@ -946,6 +1065,8 @@ function loadScript(data) {
         div.setAttribute('id', 'pick-totals-div');
 
         const activeDiv = document.createElement('div');
+        activeDiv.title = 'Active picker total does not take HOV paths into account.';
+        activeDiv.style.cursor = 'help';
         activeDiv.setAttribute('id', 'active-div');
         const activeTitleDiv = document.createElement('div');
         activeTitleDiv.textContent = 'Active Pickers';
@@ -953,14 +1074,17 @@ function loadScript(data) {
         activeDiv.appendChild(activeTitleDiv);
         const activePickers = document.createElement('div');
         activePickers.setAttribute('id', 'active-pickers-div');
+
         activeDiv.appendChild(activePickers);
 
         div.appendChild(activeDiv);
 
         const setDiv = document.createElement('div');
         setDiv.setAttribute('id', 'set-div');
+        setDiv.title = 'Planned picker total does not take HOV paths into account.';
+        setDiv.style.cursor = 'help';
         const setTitleDiv = document.createElement('div');
-        setTitleDiv.textContent = 'Set Pickers';
+        setTitleDiv.textContent = 'Planned Pickers';
         setTitleDiv.style.color = 'grey';
         setDiv.appendChild(setTitleDiv);
         const setPickers = document.createElement('div');
@@ -1007,6 +1131,30 @@ function loadScript(data) {
 
         const setDiv = document.getElementById('set-pickers-div');
         setDiv.textContent = setPickersTotal;
+
+        const multisActiveDiv = document.getElementById('multis-active-div');
+        multisActiveDiv.textContent = `active: ${activeMultisTotal}`
+
+        const multisSetDiv = document.getElementById('multis-set-div');
+        multisSetDiv.textContent = `planned: ${setMultisTotal}`
+
+        const multisDeltaDiv = document.getElementById('multis-delta-div');
+        multisDeltaDiv.textContent = `delta: ${activeMultisTotal - setMultisTotal}`
+
+        const multisDeviationDiv = document.getElementById('multis-deviation-div');
+        multisDeviationDiv.textContent = `deviation: ${getDeviationPercent(activeMultisTotal, setMultisTotal)}`
+
+        const singlesActiveDiv = document.getElementById('singles-active-div');
+        singlesActiveDiv.textContent = `active: ${activeSinglesTotal}`
+
+        const singlesSetDiv = document.getElementById('singles-set-div');
+        singlesSetDiv.textContent = `planned: ${setSinglesTotal}`
+
+        const singlesDeltaDiv = document.getElementById('singles-delta-div');
+        singlesDeltaDiv.textContent = `delta: ${activeSinglesTotal - setSinglesTotal}`
+
+        const singlesDeviationDiv = document.getElementById('singles-deviation-div');
+        singlesDeviationDiv.textContent = `deviation: ${getDeviationPercent(activeSinglesTotal, setSinglesTotal)}`
     }
 
     function makeCeRow(pp) {
@@ -1025,7 +1173,7 @@ function loadScript(data) {
         if (tur === 0 || pra === 0) {
             setPickers = 0;
         } else {
-            setPickers = Math.ceil(tur/pra); //api does not have set pickers so it is calculated by TUR/pick rate average
+            setPickers = Math.ceil(tur/pra); //api does not have planned pickers so it is calculated by TUR/pick rate average
         }
         const activePickers = getActivePickers(pp);
 
@@ -1035,10 +1183,16 @@ function loadScript(data) {
             activePickersTotal += parseInt(activePickers);
         }
         
-        //do not count pp in set pickers total if it's an HOV path as HOV default hc is 10 which is always inaccurate
+        //do not count pp in planned pickers total if it's an HOV path as HOV default hc is 10 which is always inaccurate
         if (!pp.includes('HOV')) {
             let number = parseInt(setPickers)
             setPickersTotal += number;
+        }
+
+        if (!pp.includes('HOV') && !pp.includes('Multi')) {
+            let number = parseInt(setPickers);
+            setSinglesTotal += number;
+            activeSinglesTotal += parseInt(activePickers);
         }
 
         //only give a number for batch limit if it is a multis path
@@ -1046,6 +1200,8 @@ function loadScript(data) {
             let setBatches = setData.openBatchQuantityLimit;
             let activeBatches = getActiveBatches(pp);
             row.appendChild(makeTd(`${setBatches}/${activeBatches}`));
+            setMultisTotal += parseInt(setPickers);
+            activeMultisTotal += parseInt(activePickers);
         } else {
             row.appendChild(makeTd(''));
         }
@@ -1061,6 +1217,9 @@ function loadScript(data) {
         }
         row.appendChild(deltaTd);
 
+        const deviationTd = makeTd(getDeviationPercent(activePickers, setPickers));
+        row.appendChild(deviationTd);
+
         row.appendChild(makeTd(getActualTur(pp)));
 
         //if path is HOV and TUR is set to 1000, flag green, otherwise red. SW is all HOV paths should be set to 1000
@@ -1071,6 +1230,8 @@ function loadScript(data) {
                     break;
                 default: turTd.style.backgroundColor = '#f87171';
             }
+            turTd.title = 'SW for all HOV paths is to set PRA/TUR to 100/1000. If set properly, TUR will highlight green; red if not set correctly';
+            turTd.style.cursor = 'help';
         }
         row.appendChild(turTd);
 
@@ -1105,7 +1266,7 @@ function loadScript(data) {
 
         const tur = setData.unitRateTarget;
         const pra = setData.pickRateAverage;
-        const setPickers = pra === 0 ? '' : Math.ceil(tur/pra); //api does not have set pickers so it is calculated by TUR/pick rate average
+        const setPickers = pra === 0 ? '' : Math.ceil(tur/pra); //api does not have planned pickers so it is calculated by TUR/pick rate average
 
         //only give a number for batch limit if it is a multis path
         row.appendChild(makeTd(setData.openBatchQuantityLimit));
@@ -1172,7 +1333,7 @@ function loadScript(data) {
     /*
     two categories of data. set data that needs to be accessed
     by the process path's api, including batch limit, status,
-    set pickers, set TUR, and set rate (PRA). actual data that can
+    planned pickers, set TUR, and set rate (PRA). actual data that can
     be accessed on the main page of fc console, including active pickers,
     actual TUR, and actual rate.
     */
@@ -1206,6 +1367,14 @@ function loadScript(data) {
 
     function getDelta(setPickers, activePickers) {
         return activePickers - setPickers;
+    }
+
+    function getDeviationPercent(activePickers, setPickers) {
+        if (activePickers == 0) {
+            return '100%';
+        }
+        const deviationPercent = ((setPickers - activePickers) / setPickers) * 100 * -1;
+        return `${deviationPercent > 0 ? '+' : ''}${deviationPercent.toFixed(0)}%`;
     }
 
     function getActualTur(pp) {
