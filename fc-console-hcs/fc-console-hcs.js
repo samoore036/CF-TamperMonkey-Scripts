@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      4.0
+// @version      4.1
 // @description  Display set rates, TURs, and hcs vs actuals to increase visibility of pick hc deviations
 // @author       mooshahe
 // @match        https://picking-console.na.picking.aft.a2z.com/fc/*
@@ -85,6 +85,9 @@ function loadScript(data) {
     let setMultisTotal = 0;
     let activeSinglesTotal = 0;
     let setSinglesTotal = 0;
+
+    let actualTUR = 0;
+    let setTUR = 0;
 
     const activeData = JSON.parse(data[0]).processPathInformationMap;
     const setData = JSON.parse(data[1]).processPaths; //gives an array of all process paths with set settings
@@ -1101,6 +1104,7 @@ function loadScript(data) {
         getCePaths().forEach(pp => {
             table.appendChild(makeCeRow(pp));
         });
+        table.appendChild(makeLastRow());
 
         return table;
     }
@@ -1175,20 +1179,20 @@ function loadScript(data) {
             setPickers = 0;
         } else {
             // take 10 off of TUR as set pickers will round up and this will offset over counting by 1 from testing
-            setPickers = Math.ceil((parseInt(tur - 10))/pra); //api does not have planned pickers so it is calculated by TUR/pick rate average
+            setPickers = Math.ceil((parseInt(tur - Math.floor(pra * 0.9)))/pra); //api does not have planned pickers so it is calculated by TUR/pick rate average
         }
         const activePickers = getActivePickers(pp);
 
-        //do not count HOV pickers as part of active picker total
-        if (!pp.includes('HOV')) {
+        //do not count HOV pickers or MultiCASEPallet as part of active picker total
+        if (!pp.includes('HOV') || !pp.includes('MultiCASEPallet')) {
             console.log(`active pickers total before adding: ${activePickersTotal} in ${pp}`);
             activePickersTotal += parseInt(activePickers);
         }
         
-        //do not count pp in planned pickers total if it's an HOV path as HOV default hc is 10 which is always inaccurate
-        if (!pp.includes('HOV')) {
-            let number = parseInt(setPickers)
-            setPickersTotal += number;
+        //do not count pp in planned pickers total if it's an HOV path or MultiCASEPallet as default hc is 10 which is always inaccurate
+        if (pp.includes('HOV') || pp.includes('MultiCASEPallet')) {
+        } else {
+            setPickersTotal += parseInt(setPickers);
         }
 
         if (!pp.includes('HOV') && !pp.includes('Multi')) {
@@ -1198,7 +1202,7 @@ function loadScript(data) {
         }
 
         //only give a number for batch limit if it is a multis path
-        if (pp.includes('Multi')) {
+        if (pp.includes('Multi') && !pp.includes('MultiCASEPallet')) {
             let setBatches = setData.openBatchQuantityLimit;
             let activeBatches = getActiveBatches(pp);
             row.appendChild(makeTd(`${setBatches}/${activeBatches}`));
@@ -1226,7 +1230,7 @@ function loadScript(data) {
 
         //if path is HOV and TUR is set to 1000, flag green, otherwise red. SW is all HOV paths should be set to 1000
         const turTd = makeTd(tur);
-        if (pp.includes('PPHOV')) {
+        if (pp.includes('PPHOV') || pp.includes('MultiCASEPallet')) {
             switch(turTd.textContent) {
                 case '1000': turTd.style.backgroundColor = '#22c55e';
                     break;
@@ -1255,6 +1259,10 @@ function loadScript(data) {
         row.appendChild(statusTd);
 
         return row;
+    }
+
+    function makeLastRow() {
+
     }
 
     function makeOtherRow(pp) {
