@@ -1104,7 +1104,6 @@ function loadScript(data) {
         getCePaths().forEach(pp => {
             table.appendChild(makeCeRow(pp));
         });
-        table.appendChild(makeLastRow());
 
         return table;
     }
@@ -1259,10 +1258,6 @@ function loadScript(data) {
         row.appendChild(statusTd);
 
         return row;
-    }
-
-    function makeLastRow() {
-
     }
 
     function makeOtherRow(pp) {
