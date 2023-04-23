@@ -53,32 +53,36 @@
     addStats();
 
     function addStats() {
-        for (let i = 0; i < rows.length; i++) {
-            let workPool = rows[i].querySelectorAll('td')[14].textContent.trim();
-            let dwellTime = parseInt(rows[i].querySelectorAll('td')[15].textContent.trim().split('\n')[0]);
-            switch (workPool) {
-                case 'PickingNotYetPickedNonPickable':
-                case 'ReadyToPickNonPickable':
-                    nonPickableTotal++;
-                    break;
-                case 'PickingPickedInProgress':
-                case 'PickingPickedInTransit':
-                case 'PickingPickedAtDestination':
-                    pickingPickedTotal++;
-                    pickingPickedAvg += dwellTime;
-                    break;
-                case 'Sorted':
-                    sortedTotal++;
-                    sortedAvg += dwellTime;
-                    break;
-                case 'Scanned':
-                    scannedTotal++;
-                    scannedAvg += dwellTime;
-                    break;
-                case 'ProblemSolving':
-                    psolveTotal++;
-                    psolveAvg += dwellTime;
+        try {
+            for (let i = 0; i < rows.length; i++) {
+                let workPool = rows[i].querySelectorAll('td')[14].textContent.trim();
+                let dwellTime = parseInt(rows[i].querySelectorAll('td')[15].textContent.trim().split('\n')[0]);
+                switch (workPool) {
+                    case 'PickingNotYetPickedNonPickable':
+                    case 'ReadyToPickNonPickable':
+                        nonPickableTotal++;
+                        break;
+                    case 'PickingPickedInProgress':
+                    case 'PickingPickedInTransit':
+                    case 'PickingPickedAtDestination':
+                        pickingPickedTotal++;
+                        pickingPickedAvg += dwellTime;
+                        break;
+                    case 'Sorted':
+                        sortedTotal++;
+                        sortedAvg += dwellTime;
+                        break;
+                    case 'Scanned':
+                        scannedTotal++;
+                        scannedAvg += dwellTime;
+                        break;
+                    case 'ProblemSolving':
+                        psolveTotal++;
+                        psolveAvg += dwellTime;
+                }
             }
+        } catch (e) {
+            displayOptionsError();
         }
     }
 
@@ -1051,6 +1055,17 @@
         a.setAttribute('href', link)
         a.innerHTML = wp;
         return a;
+    }
+
+    // alert user if they do not have the proper options checked as this is a very common error
+    function displayOptionsError() {
+        const div = document.getElementById('shipmentList.topPager');
+        const errorMessage = document.createElement('p');
+        errorMessage.textContent = 'Please go to options and enable ONLY Last Expected Ship Date and Outer Scannable ID then reload.';
+        errorMessage.style.cssText += `
+        font-weight: bold; color: red; background-color: yellow; width: 60%;
+        `
+        div.prepend(errorMessage);
     }
 
     /*
