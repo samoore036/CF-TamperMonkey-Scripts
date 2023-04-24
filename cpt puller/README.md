@@ -3,7 +3,7 @@ As SW increases and with the nature of 2:1, it can be easy to miss a CPT pull. T
 This is not a replacement of pulls as flow leads should still be aware of how many misses they are looking at for a CPT. 
 It is intended as a supplement to support our work as existing tools such as Atlas Alerts are tedious to use and require a lot of filtering.
 This plugin will work for **any USNS FC** regardless of what timezone your laptop is set to.
-This plugin will not auto-download if your laptop is locked or on sleep mode/turned off.
+This plugin **will** auto-download if your laptop is locked, but not if it is on sleep mode/turned off.
 The .csv's will be sent to wherever your downloads normally go (usually downloads folder) and will only include CE misses.
 
 **Setup:** 
