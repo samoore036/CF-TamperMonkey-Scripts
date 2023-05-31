@@ -2,7 +2,7 @@
 // @name         Dwell Call Outs
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      1.3
+// @version      1.4
 // @description  Organize cpt call outs by pack group and put in an easy to read format for visibility in tracking dwelling cages
 // @author       mooshahe
 // @match        https://rodeo-iad.amazon.com/*/ItemList?*
@@ -53,7 +53,10 @@
     addStats();
 
     function addStats() {
-        try {
+        // alert user if they did not include the options, else continue with the script
+        if (!document.URL.includes('enabledColumns=LAST_EXSD&enabledColumns=OUTER_SCANNABLE_ID')) {
+            displayOptionsError();
+        } else {
             for (let i = 0; i < rows.length; i++) {
                 let workPool = rows[i].querySelectorAll('td')[14].textContent.trim();
                 let dwellTime = parseInt(rows[i].querySelectorAll('td')[15].textContent.trim().split('\n')[0]);
@@ -81,8 +84,6 @@
                         psolveAvg += dwellTime;
                 }
             }
-        } catch (e) {
-            displayOptionsError();
         }
     }
 
@@ -1061,7 +1062,7 @@
     function displayOptionsError() {
         const div = document.getElementById('shipmentList.topPager');
         const errorMessage = document.createElement('p');
-        errorMessage.textContent = 'Please go to options and enable ONLY Last Expected Ship Date and Outer Scannable ID then reload.';
+        errorMessage.textContent = 'Please go to options and enable ONLY Last Expected Ship Date and Outer Scannable ID, save as default, then reload.';
         errorMessage.style.cssText += `
         font-weight: bold; color: red; background-color: yellow; width: 60%;
         `
