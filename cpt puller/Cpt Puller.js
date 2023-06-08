@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      2.1
+// @version      2.2
 // @description  Display TRB status and calculate mitigation in CORA
 // @author       mooshahe
 // @match        https://rodeo-iad.amazon.com/*/ExSD*
@@ -279,6 +279,7 @@ function getFcTimeZone(fc) {
         case 'YEG1':
         case 'YYZ9':
             return 1;
+        case 'AMA1':
         case 'BNA2':
         case 'DFW6':
         case 'FAR1':
@@ -307,9 +308,11 @@ function getFcTimeZone(fc) {
         case 'ABE4':
         case 'ACY2':
         case 'ALB1':
+        case 'AKR1':
         case 'BOS7':
         case 'BWI4':
         case 'CHA2':
+        case 'CHO1':
         case 'CLT3':
         case 'CMH2':
         case 'CMH3':
@@ -324,6 +327,7 @@ function getFcTimeZone(fc) {
         case 'JAX3':
         case 'MCO2':
         case 'MDT1':
+        case 'MDT4':
         case 'MGE3':
         case 'PHL4':
         case 'PHL5':
