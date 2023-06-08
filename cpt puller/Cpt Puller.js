@@ -69,7 +69,7 @@ function checkForCpts() {
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = url;
-                a.download = `${fc} ${nextCpt.getHours()}${nextCpt.getMinutes() === 0 ? '00' : nextCpt.getMinutes()} ${timeNow.getFullYear()}-${timeNow.getMonth() + 1}-${timeNow.getDate()}`;
+                a.download = `${fc} ${nextCpt.getHours() < 10 ? `0${nextCpt.getHours()}` : nextCpt.getHours()}${nextCpt.getMinutes() === 0 ? '00' : nextCpt.getMinutes()} ${timeNow.getFullYear()}-${timeNow.getMonth() + 1}-${timeNow.getDate()}`;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
