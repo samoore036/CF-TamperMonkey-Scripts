@@ -287,16 +287,19 @@ function loadScript(data) {
     }
 
     function makeDivs() {
+        const parentDiv = document.getElementsByClassName('mat-tab-body-content')[0];
         const overlay = makeOverlay();
         overlay.appendChild(makeSettingsDiv());
-        document.body.appendChild(overlay);
+        parentDiv.appendChild(overlay);
 
-        const parentDiv = document.getElementsByClassName('mat-tab-body-content')[0];
         const masterDiv = makeMasterDiv();
         masterDiv.style.cssText += `
             padding: 1rem;
             display: flex;
             gap: 2vw;
+            font-size: 1.4rem;
+            line-height: 2rem;
+            font-family: sans-serif;
         `
         parentDiv.appendChild(masterDiv);
 
@@ -355,25 +358,29 @@ function loadScript(data) {
             border: 2px solid black;
             background-color: #e4e4e7;
             display: flex;
-            gap: 1rem;
-            min-width: 40%;
             border-radius: 20px;
+            font-family: sans-serif;
+            max-width: 90%;
+            max-height: 75%;
         `
 
         const currentPathsDiv = document.createElement('div');
+        currentPathsDiv.setAttribute('id', 'current-paths-div');
         currentPathsDiv.style.cssText += `
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 3rem;
+            padding: 20px;
         `
 
         const header = document.createElement('h3');
         header.textContent = 'Current Paths';
+        header.style.cssText += 'margin: 0;'
         currentPathsDiv.appendChild(header);
 
         const pathsDiv = document.createElement('div');
         pathsDiv.setAttribute('id', 'paths-div');
+        pathsDiv.style.cssText += `display: flex`;
         currentPathsDiv.appendChild(pathsDiv);
 
         const ceDiv = document.createElement('div');
@@ -384,7 +391,15 @@ function loadScript(data) {
 
         const ceList = document.createElement('ul');
         ceList.setAttribute('id', 'current-ce-paths');
-        ceList.style.minWidth = '18rem';
+        ceList.style.cssText += `
+            height: 25vh;
+            min-width: 150px;
+            overflow: hidden scroll;
+            display: flex;
+            flex-direction: column;
+            background-color: white;
+            padding: 1rem;
+        `
         loadCurrentCePaths(ceList);
         ceDiv.appendChild(ceList);
         pathsDiv.appendChild(ceDiv);
@@ -397,7 +412,15 @@ function loadScript(data) {
 
         const tsoList = document.createElement('ul');
         tsoList.setAttribute('id', 'current-tso-paths');
-        tsoList.style.minWidth = '15rem';
+        tsoList.style.cssText += `
+            height: 25vh;
+            min-width: 150px;
+            overflow: hidden scroll;
+            display: flex;
+            flex-direction: column;
+            background-color: white;
+            padding: 1rem;
+        `
         loadCurrentTsoPaths(tsoList);
         tsoDiv.appendChild(tsoList);
         pathsDiv.appendChild(tsoDiv);
@@ -410,25 +433,61 @@ function loadScript(data) {
 
         const vretsList = document.createElement('ul');
         vretsList.setAttribute('id', 'current-vrets-paths');
-        vretsList.style.minWidth = '15rem';
+        vretsList.style.cssText += `
+            height: 25vh;
+            min-width: 150px;
+            overflow: hidden scroll;
+            display: flex;
+            flex-direction: column;
+            background-color: white;
+            padding: 1rem;
+        `
         loadCurrentVretsPaths(vretsList);
         vretsDiv.appendChild(vretsList);
         pathsDiv.appendChild(vretsDiv);
 
         const buttonDiv = document.createElement('div');
         buttonDiv.setAttribute('id', 'button-div');
+        buttonDiv.style.cssText += `
+            display: flex;
+            gap: 4vw;
+        `
 
         const removeButton = document.createElement('button');
-        removeButton.classList.add('settings-btn');
         removeButton.setAttribute('id', 'remove-btn');
+        removeButton.style.cssText += `
+            background-color: rgb(239, 68, 68);
+            border: 2px solid darkred;
+            margin-top: 2rem;
+            margin-left: 1.5rem;
+            font-weight: bold;
+            font-size: 1.3rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            padding-top: 0.4rem;
+            padding-bottom: 0.4rem;
+            color: white;
+            cursor: pointer;
+        `
         removeButton.textContent = 'Remove path';
         // removeButton.addEventListener('click', removeCurrentPath);
         buttonDiv.appendChild(removeButton);
 
         //has the same functionality as the close settings button. added as users were searching for a button to press after putting in paths
         const saveButton = document.createElement('button');
-        saveButton.classList.add('settings-btn');
         saveButton.setAttribute('id', 'save-btn');
+        saveButton.style.cssText += `
+            background-color: rgb(52, 211, 153);
+            border: 2px solid darkgreen;
+            margin-top: 2rem;
+            margin-left: 1.5rem;
+            font-weight: bold;
+            font-size: 1.3rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            color: white;
+            cursor: pointer;
+        `
         saveButton.textContent = 'Save paths';
         saveButton.addEventListener('click', closeSettings);
         buttonDiv.appendChild(saveButton);
@@ -449,10 +508,11 @@ function loadScript(data) {
             flex-direction: column;
             align-items: center;
             border-left: 2px solid black;
-            padding: 3rem;
+            padding: 20px;
         `
 
         const header = document.createElement('h3');
+        header.style.cssText += 'margin: 0;'
         header.textContent = 'All Paths';
         allPathsDiv.appendChild(header);
 
@@ -469,8 +529,8 @@ function loadScript(data) {
 
         const allPathsList = document.createElement('ul');
         allPathsList.style.cssText += `
-            max-height: 25vh;
-            overflow-y: auto;
+            height: 25vh;
+            overflow: hidden scroll;
             display: flex;
             flex-direction: column;
             background-color: white;
@@ -486,8 +546,7 @@ function loadScript(data) {
         selectionDiv.style.cssText += `
             display: flex;
             flex-direction: column;
-            gap: 5rem;
-            padding-top: 2rem;
+            gap: 1.2rem;
         `
 
         const ceAddButton = document.createElement('button');
@@ -495,12 +554,15 @@ function loadScript(data) {
         ceAddButton.style.cssText += `
             background-color: rgb(59, 130, 246);
             border: 2px solid blue;
-            width: 16rem;
-            font-size: 1.7rem;
-            font-weight: bold;
-            padding: 0.5rem 0px;
             color: white;
-            cursor: pointer;
+            margin-top: 2rem;
+            margin-left: 1.5rem;
+            font-weight: bold;
+            font-size: 1.3rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            padding-top: 0.4rem;
+            padding-bottom: 0.4rem;
         `
         ceAddButton.textContent = 'Add to CE list';
         ceAddButton.addEventListener('click', addToCEList);
@@ -511,12 +573,15 @@ function loadScript(data) {
         tsoAddButton.style.cssText += `
             background-color: rgb(139, 92, 246);
             border: 2px solid rgb(91, 33, 182);
-            width: 16rem;
-            font-size: 1.7rem;
-            font-weight: bold;
-            padding: 0.5rem 0px;
             color: white;
-            cursor: pointer;
+            margin-top: 2rem;
+            margin-left: 1.5rem;
+            font-weight: bold;
+            font-size: 1.3rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            padding-top: 0.4rem;
+            padding-bottom: 0.4rem;
         `
         
         tsoAddButton.textContent = 'Add to TSO list';
@@ -528,12 +593,15 @@ function loadScript(data) {
         vretsAddButton.style.cssText += `
             background-color: rgb(16, 185, 129);
             border: 2px solid darkgreen;
-            width: 16rem;
-            font-size: 1.7rem;
-            font-weight: bold;
-            padding: 0.5rem 0px;
             color: white;
-            cursor: pointer;
+            margin-top: 2rem;
+            margin-left: 1.5rem;
+            font-weight: bold;
+            font-size: 1.3rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            padding-top: 0.4rem;
+            padding-bottom: 0.4rem;
         `
         
         vretsAddButton.textContent = 'Add to VRETs list';
@@ -558,6 +626,19 @@ function loadScript(data) {
     function makeCloseSettingsBtn() {
         const button = document.createElement('button');
         button.setAttribute('id', 'close-btn');
+        button.style.cssText += `
+            position: relative;
+            bottom: 1.rem;
+            left: 1.5rem;
+            border: medium none;
+            border-radius: 2rem;
+            font-size: 2rem;
+            width: 3.5rem;
+            height: 3.5rem;
+            color: white;
+            background-color: rgb(220, 38, 38);
+            cursor: pointer;
+        `
         button.textContent = '✖';
         button.addEventListener('click', closeSettings);
 
