@@ -360,8 +360,6 @@ function loadScript(data) {
             display: flex;
             border-radius: 20px;
             font-family: sans-serif;
-            max-width: 90%;
-            max-height: 75%;
         `
 
         const currentPathsDiv = document.createElement('div');
@@ -392,11 +390,12 @@ function loadScript(data) {
         const ceList = document.createElement('ul');
         ceList.setAttribute('id', 'current-ce-paths');
         ceList.style.cssText += `
-            height: 25vh;
+            height: 11rem;
             min-width: 150px;
             overflow: hidden scroll;
             display: flex;
             flex-direction: column;
+            gap: 5px;
             background-color: white;
             padding: 1rem;
         `
@@ -413,11 +412,12 @@ function loadScript(data) {
         const tsoList = document.createElement('ul');
         tsoList.setAttribute('id', 'current-tso-paths');
         tsoList.style.cssText += `
-            height: 25vh;
+            height: 11rem;
             min-width: 150px;
             overflow: hidden scroll;
             display: flex;
             flex-direction: column;
+            gap: 5px;
             background-color: white;
             padding: 1rem;
         `
@@ -434,11 +434,12 @@ function loadScript(data) {
         const vretsList = document.createElement('ul');
         vretsList.setAttribute('id', 'current-vrets-paths');
         vretsList.style.cssText += `
-            height: 25vh;
+            height: 11rem;
             min-width: 150px;
             overflow: hidden scroll;
             display: flex;
             flex-direction: column;
+            gap: 5px;
             background-color: white;
             padding: 1rem;
         `
@@ -458,7 +459,7 @@ function loadScript(data) {
         removeButton.style.cssText += `
             background-color: rgb(239, 68, 68);
             border: 2px solid darkred;
-            margin-top: 2rem;
+            margin-top: 1rem;
             margin-left: 1.5rem;
             font-weight: bold;
             font-size: 1.3rem;
@@ -479,7 +480,7 @@ function loadScript(data) {
         saveButton.style.cssText += `
             background-color: rgb(52, 211, 153);
             border: 2px solid darkgreen;
-            margin-top: 2rem;
+            margin-top: 1rem;
             margin-left: 1.5rem;
             font-weight: bold;
             font-size: 1.3rem;
@@ -521,7 +522,6 @@ function loadScript(data) {
         mainSelectionDiv.style.cssText += `
             display: flex;
             margin-top: 3rem;
-            gap: 3rem;
         `
 
         const listDiv = document.createElement('div');
@@ -529,10 +529,11 @@ function loadScript(data) {
 
         const allPathsList = document.createElement('ul');
         allPathsList.style.cssText += `
-            height: 25vh;
+            height: 11rem;
             overflow: hidden scroll;
             display: flex;
             flex-direction: column;
+            gap: 5px;
             background-color: white;
             padding: 1rem;
         `
@@ -546,7 +547,6 @@ function loadScript(data) {
         selectionDiv.style.cssText += `
             display: flex;
             flex-direction: column;
-            gap: 1.2rem;
         `
 
         const ceAddButton = document.createElement('button');
@@ -558,7 +558,8 @@ function loadScript(data) {
             margin-top: 2rem;
             margin-left: 1.5rem;
             font-weight: bold;
-            font-size: 1.3rem;
+            font-size: 1rem;
+            width: 11rem;
             padding-left: 1rem;
             padding-right: 1rem;
             padding-top: 0.4rem;
@@ -577,7 +578,8 @@ function loadScript(data) {
             margin-top: 2rem;
             margin-left: 1.5rem;
             font-weight: bold;
-            font-size: 1.3rem;
+            font-size: 1rem;
+            width: 11rem;
             padding-left: 1rem;
             padding-right: 1rem;
             padding-top: 0.4rem;
@@ -597,7 +599,8 @@ function loadScript(data) {
             margin-top: 2rem;
             margin-left: 1.5rem;
             font-weight: bold;
-            font-size: 1.3rem;
+            font-size: 1rem;
+            width: 11rem;
             padding-left: 1rem;
             padding-right: 1rem;
             padding-top: 0.4rem;
@@ -628,13 +631,13 @@ function loadScript(data) {
         button.setAttribute('id', 'close-btn');
         button.style.cssText += `
             position: relative;
-            bottom: 1.rem;
-            left: 1.5rem;
+            left: 1rem;
+            bottom: 1rem;
             border: medium none;
             border-radius: 2rem;
-            font-size: 2rem;
-            width: 3.5rem;
-            height: 3.5rem;
+            font-size: 1.7rem;
+            width: 2.5rem;
+            height: 2.5rem;
             color: white;
             background-color: rgb(220, 38, 38);
             cursor: pointer;
