@@ -78,6 +78,16 @@ function loadScript(data) {
     console.log(setData);
     console.log(batchData);
 
+    /*----------------/
+    -global variables-
+    /----------------*/
+    // paths that are not categorized yet
+    const freeSelectedPaths = [];
+    // category paths
+    const ceSelectedPaths = [];
+    const tsoSelectedPaths = [];
+    const vretsSelectedPaths = [];
+
     /*---------------------------/
     -local storage functionality-
     /--------------------------*/
@@ -123,11 +133,8 @@ function loadScript(data) {
 
     function removeCePath(pp) {
         const currentCePaths = getCePaths();
-        for (let i = 0; i < currentCePaths.length; i++) {
-            if (currentCePaths[i] === pp) {
-                currentCePaths.splice(i, 1);
-            }
-        }
+        currentCePaths.splice(currentCePaths.indexOf(pp), 1);
+        
         localStorage.setItem(`${fc}-ce`, JSON.stringify(currentCePaths));
     }
 
@@ -142,19 +149,10 @@ function loadScript(data) {
         return tsoArr.sort();
     }
 
-    function addTsoPath(pp) {
-        const currentTsoPaths = getTsoPaths();
-        currentTsoPaths.push(pp);
-        localStorage.setItem(`${fc}-tso`, JSON.stringify(currentTsoPaths));
-    }
-
     function removeTsoPath(pp) {
         const currentTsoPaths = getTsoPaths();
-        for (let i = 0; i < currentTsoPaths.length; i++) {
-            if (currentTsoPaths[i] === pp) {
-                currentTsoPaths.splice(i, 1);
-            }
-        }
+        currentTsoPaths.splice(currentTsoPaths.indexOf(pp), 1);
+        
         localStorage.setItem(`${fc}-tso`, JSON.stringify(currentTsoPaths));
     }
 
@@ -169,26 +167,11 @@ function loadScript(data) {
         return vretsArr.sort();
     }
 
-    function addVretsPath(pp) {
-        const currentVretsPaths = getVretsPaths();
-        currentVretsPaths.push(pp);
-        localStorage.setItem(`${fc}-vrets`, JSON.stringify(currentVretsPaths));
-    }
-
     function removeVretsPath(pp) {
         const currentVretsPaths = getVretsPaths();
-        for (let i = 0; i < currentVretsPaths.length; i++) {
-            if (currentVretsPaths[i] === pp) {
-                currentVretsPaths.splice(i, 1);
-            }
-        }
+        currentVretsPaths.splice(currentVretsPaths.indexOf(pp), 1);
+        
         localStorage.setItem(`${fc}-vrets`, JSON.stringify(currentVretsPaths));
-    }
-
-    function addCePath(pp) {
-        const currentCePaths = getCePaths();
-        currentCePaths.push(pp);
-        localStorage.setItem(`${fc}-ce`, JSON.stringify(currentCePaths));
     }
 
     parseData(getPackData());
@@ -360,6 +343,7 @@ function loadScript(data) {
             display: flex;
             border-radius: 20px;
             font-family: sans-serif;
+            font-size: 15px;
         `
 
         const currentPathsDiv = document.createElement('div');
@@ -395,7 +379,6 @@ function loadScript(data) {
             overflow: hidden scroll;
             display: flex;
             flex-direction: column;
-            gap: 5px;
             background-color: white;
             padding: 1rem;
         `
@@ -417,7 +400,6 @@ function loadScript(data) {
             overflow: hidden scroll;
             display: flex;
             flex-direction: column;
-            gap: 5px;
             background-color: white;
             padding: 1rem;
         `
@@ -439,7 +421,6 @@ function loadScript(data) {
             overflow: hidden scroll;
             display: flex;
             flex-direction: column;
-            gap: 5px;
             background-color: white;
             padding: 1rem;
         `
@@ -462,7 +443,7 @@ function loadScript(data) {
             margin-top: 1rem;
             margin-left: 1.5rem;
             font-weight: bold;
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             padding-left: 1rem;
             padding-right: 1rem;
             padding-top: 0.4rem;
@@ -470,8 +451,8 @@ function loadScript(data) {
             color: white;
             cursor: pointer;
         `
-        removeButton.textContent = 'Remove path';
-        // removeButton.addEventListener('click', removeCurrentPath);
+        removeButton.textContent = 'Remove paths';
+        removeButton.addEventListener('click', removeCurrentPaths);
         buttonDiv.appendChild(removeButton);
 
         //has the same functionality as the close settings button. added as users were searching for a button to press after putting in paths
@@ -483,7 +464,7 @@ function loadScript(data) {
             margin-top: 1rem;
             margin-left: 1.5rem;
             font-weight: bold;
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             padding-left: 1rem;
             padding-right: 1rem;
             color: white;
@@ -533,7 +514,6 @@ function loadScript(data) {
             overflow: hidden scroll;
             display: flex;
             flex-direction: column;
-            gap: 5px;
             background-color: white;
             padding: 1rem;
         `
@@ -558,12 +538,13 @@ function loadScript(data) {
             margin-top: 2rem;
             margin-left: 1.5rem;
             font-weight: bold;
-            font-size: 1rem;
-            width: 11rem;
+            font-size: 14px;
+            width: 10rem;
             padding-left: 1rem;
             padding-right: 1rem;
             padding-top: 0.4rem;
             padding-bottom: 0.4rem;
+            cursor: pointer;
         `
         ceAddButton.textContent = 'Add to CE list';
         ceAddButton.addEventListener('click', addToCEList);
@@ -578,12 +559,13 @@ function loadScript(data) {
             margin-top: 2rem;
             margin-left: 1.5rem;
             font-weight: bold;
-            font-size: 1rem;
-            width: 11rem;
+            font-size: 14px;
+            width: 10rem;
             padding-left: 1rem;
             padding-right: 1rem;
             padding-top: 0.4rem;
             padding-bottom: 0.4rem;
+            cursor: pointer;
         `
         
         tsoAddButton.textContent = 'Add to TSO list';
@@ -599,12 +581,13 @@ function loadScript(data) {
             margin-top: 2rem;
             margin-left: 1.5rem;
             font-weight: bold;
-            font-size: 1rem;
-            width: 11rem;
+            font-size: 14px;
+            width: 10rem;
             padding-left: 1rem;
             padding-right: 1rem;
             padding-top: 0.4rem;
             padding-bottom: 0.4rem;
+            cursor: pointer;
         `
         
         vretsAddButton.textContent = 'Add to VRETs list';
@@ -843,14 +826,75 @@ function loadScript(data) {
     function makeLi(list, pp) {
         const li = document.createElement('li');
         if (list.id === 'all-paths-list') {
-            li.classList.add('all-paths-li');
             li.textContent = pp;
-        } else {
-            li.classList.add('current-path');
+            li.addEventListener('click', () => {
+                if (!li.classList.contains('free-selected')) {
+                    li.classList.add('free-selected');
+                    li.style.backgroundColor = 'blue';
+                    li.style.color = 'white';
+                    freeSelectedPaths.push(pp);
+                    freeSelectedPaths.sort((a, b) => a > b);
+                } else {
+                    li.classList.remove('free-selected');
+                    li.style.backgroundColor = 'white';
+                    li.style.color = 'black';
+                    freeSelectedPaths.splice(freeSelectedPaths.indexOf(pp), 1);
+                }
+            })
+        } else if (list.id === 'current-ce-paths') {
             li.textContent = pp;
+            li.addEventListener('click', () => {
+                if (!li.classList.contains('ce-selected')) {
+                    li.classList.add('ce-selected');
+                    li.style.backgroundColor = 'blue';
+                    li.style.color = 'white';
+                    ceSelectedPaths.push(pp);
+                    ceSelectedPaths.sort((a, b) => a > b);
+                } else {
+                    li.classList.remove('ce-selected');
+                    li.style.backgroundColor = 'white';
+                    li.style.color = 'black';
+                    ceSelectedPaths.splice(ceSelectedPaths.indexOf(pp), 1);
+                }
+            })
+        } else if (list.id === 'current-tso-paths') {
+            li.textContent = pp;
+            li.addEventListener('click', () => {
+                if (!li.classList.contains('tso-selected')) {
+                    li.classList.add('tso-selected');
+                    li.style.backgroundColor = 'blue';
+                    li.style.color = 'white';
+                    tsoSelectedPaths.push(pp);
+                    tsoSelectedPaths.sort((a, b) => a > b);
+                } else {
+                    li.classList.remove('tso-selected');
+                    li.style.backgroundColor = 'white';
+                    li.style.color = 'black';
+                    tsoSelectedPaths.splice(tsoSelectedPaths.indexOf(pp), 1);
+                }
+            })
+        } else if (list.id === 'current-vrets-paths') {
+            li.textContent = pp;
+            li.addEventListener('click', () => {
+                if (!li.classList.contains('vrets-selected')) {
+                    li.classList.add('vrets-selected');
+                    li.style.backgroundColor = 'blue';
+                    li.style.color = 'white';
+                    vretsSelectedPaths.push(pp);
+                    vretsSelectedPaths.sort((a, b) => a > b);
+                } else {
+                    li.classList.remove('vrets-selected');
+                    li.style.backgroundColor = 'white';
+                    li.style.color = 'black';
+                    vretsSelectedPaths.splice(vretsSelectedPaths.indexOf(pp), 1);
+                }
+            })
         }
+
         li.style.cssText += `
             list-style: none;
+            padding-top: 0.2rem;
+            padding-bottom: 0.2rem;
         `
         li.onmouseover = li.style.cursor = 'pointer';
 
@@ -913,20 +957,14 @@ function loadScript(data) {
         const cePaths = getCePaths();
         const tsoPaths = getTsoPaths();
         const vretsPaths = getVretsPaths();
-        for (let path of cePaths) {
-            if (path === pp) {
-                return true;
-            }
+        if (cePaths.indexOf(pp) !== -1) { 
+            return true;
         }
-        for (let path of tsoPaths) {
-            if (path === pp) {
-                return true;
-            }
+        if (tsoPaths.indexOf(pp) !== -1) {
+            return true;
         }
-        for (let path of vretsPaths) {
-            if (path === pp) {
-                return true;
-            }
+        if (vretsPaths.indexOf(pp) !== -1) {
+            return true;
         }
         return false;
     }
@@ -938,89 +976,81 @@ function loadScript(data) {
     update current paths for that path by checking against local storage
     */
     function addToCEList() {
-        // if (currentFreeSelection === undefined || currentFreeSelection === '') {
-        //     return;
-        // }
-        // addCePath(currentFreeSelection);
-        // removeFromFreePathsList(currentFreeSelection);
-        // updateCurrentLists();
-        // clearSelectedPath();
+        if (freeSelectedPaths === undefined || freeSelectedPaths.length === 0) {
+            return;
+        }
+        addCePath(freeSelectedPaths);
+        // clear selected paths array
+        freeSelectedPaths.length = 0;
+        updateCurrentLists();
+    }
+
+    function addCePath(freeSelectedPaths) {
+        const currentCePaths = getCePaths();
+        freeSelectedPaths.forEach(pp => currentCePaths.push(pp));
+        localStorage.setItem(`${fc}-ce`, JSON.stringify(currentCePaths));
     }
 
     function addToTSOList() {
-        // if (currentFreeSelection === undefined || currentFreeSelection === '') {
-        //     return;
-        // }
-        // addTsoPath(currentFreeSelection);
-        // removeFromFreePathsList(currentFreeSelection);
-        // updateCurrentLists();
-        // clearSelectedPath();
+        if (freeSelectedPaths === undefined || freeSelectedPaths.length === 0) {
+            return;
+        }
+        addTsoPath(freeSelectedPaths);
+        // clear selected paths array
+        freeSelectedPaths.length = 0;
+        updateCurrentLists();
+    }
+
+    function addTsoPath(freeSelectedPaths) {
+        const currentTsoPaths = getTsoPaths();
+        freeSelectedPaths.forEach(pp => currentTsoPaths.push(pp));
+        localStorage.setItem(`${fc}-tso`, JSON.stringify(currentTsoPaths));
     }
 
     function addToVretsList() {
-        // if (currentFreeSelection === undefined || currentFreeSelection === '') {
-        //     return;
-        // }
-        // addVretsPath(currentFreeSelection);
-        // removeFromFreePathsList(currentFreeSelection);
-        // updateCurrentLists();
-        // clearSelectedPath();
-    }
-
-    /*-------------------/
-    -common CSS stylings-
-    /------------------*/
-    function getTableStyles() {
-        return `
-            border-collapse: collapse;
-            margin: 1rem 2rem;
-        `
-    }
-
-    function getTdStyles() {
-        return `
-            border: 1px solid black;
-            padding: 3px 5px;
-        `
-    }
-
-    function getTrStyles() {
-        return `
-            background-color: white;
-        `
-    }
-
-    function getListStyles() {
-        return `
-            max-height: 40%;
-        `
-    }
-
-    function getLinkStyles() {
-        return `
-            text-decoration: none;
-            color: black;
-        `
-
-        /*
-         a.onmouseover = () => {
-            a.style.cursor = 'pointer';
-            a.style.color = 'blue';
-            a.style.borderBottom = '1px solid blue';
+        if (freeSelectedPaths === undefined || freeSelectedPaths.length === 0) {
+            return;
         }
-        a.onmouseleave = () => {
-            a.style.color = 'black';
-            a.style.border = 'none';
+        addVretsPath(freeSelectedPaths);
+        // clear selected paths array
+        freeSelectedPaths.length = 0;
+        updateCurrentLists();
+    }
+
+    function addVretsPath(freeSelectedPaths) {
+        const currentVretsPaths = getVretsPaths();
+        freeSelectedPaths.forEach(pp => currentVretsPaths.push(pp));
+        localStorage.setItem(`${fc}-vrets`, JSON.stringify(currentVretsPaths));
+    }
+
+    // remove old DOM elements and insert updated ones. React would be nice to have here
+    function updateCurrentLists() {
+        // reset the selected arrays
+        freeSelectedPaths.length =0;
+        ceSelectedPaths.length = 0;
+        tsoSelectedPaths.length = 0;
+        vretsSelectedPaths.length = 0;
+        const overlay = document.getElementById('overlay');
+        const settingsDiv = document.getElementById('settings-div');
+        settingsDiv.remove();
+
+        const updatedSettingsDiv = makeSettingsDiv();
+        overlay.appendChild(updatedSettingsDiv);
+    }
+
+    function removeCurrentPaths() {
+        for (let i = 0; i < ceSelectedPaths.length; i++) {
+            removeCePath(ceSelectedPaths[i]);
         }
-        a.style.textDecoration = 'none';
-        a.style.color = 'black';
-        */
+        for (let i = 0; i < tsoSelectedPaths.length; i++) {
+            removeTsoPath(tsoSelectedPaths[i]);
+        }
+        for (let i = 0; i < vretsSelectedPaths.length; i++) {
+            removeVretsPath(vretsSelectedPaths[i]);
+        }
+
+        updateCurrentLists();
     }
-
-    function getTableDivStyles() {
-
-    }
-
 
 }
 
