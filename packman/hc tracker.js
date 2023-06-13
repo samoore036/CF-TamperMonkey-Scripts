@@ -88,6 +88,14 @@ function loadScript(data) {
     const tsoSelectedPaths = [];
     const vretsSelectedPaths = [];
 
+    // totals used for the summary table
+    let activePickersTotal = 0;
+    let setPickersTotal = 0;
+    let activeMultisTotal = 0;
+    let setMultisTotal = 0;
+    let activeSinglesTotal = 0;
+    let setSinglesTotal = 0;
+
     /*---------------------------/
     -local storage functionality-
     /--------------------------*/
@@ -178,6 +186,7 @@ function loadScript(data) {
 
     makeDivs();
     
+    loadPickTableData();
     loadPackTableData();
 
     // there is no get api so must iterate over the DOM and create an object with each packer's information to then parse
@@ -276,6 +285,7 @@ function loadScript(data) {
         parentDiv.appendChild(overlay);
 
         const masterDiv = makeMasterDiv();
+        masterDiv.setAttribute('id', 'master-div');
         masterDiv.style.cssText += `
             padding: 1rem;
             display: flex;
@@ -287,9 +297,7 @@ function loadScript(data) {
         parentDiv.appendChild(masterDiv);
 
         const pickDiv = makePickDiv();
-        pickDiv.appendChild(makeOpenSettingsButton());
-        const cePickTable = makeCePickTable();
-        pickDiv.appendChild(cePickTable);
+        pickDiv.setAttribute('id', 'pick-div');
         masterDiv.appendChild(pickDiv);
 
         const packDiv = makePackDiv();
@@ -603,7 +611,18 @@ function loadScript(data) {
     function makeOpenSettingsButton() {
         const button = document.createElement('button');
         button.setAttribute('id', 'settings-btn');
+        button.style.cssText += `
+            height: 3rem;
+            width: 7rem;
+            border: 2px solid darkblue;
+            background-color: #FDE68A;
+            font-size: 1.1rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+        `
         button.textContent = 'Process Path Settings';
+        button.style.cursor = 'pointer';
         button.addEventListener('click', openSettings);
         
         return button;
@@ -639,6 +658,25 @@ function loadScript(data) {
 
     function makePickDiv() {
         const pickDiv = document.createElement('div');
+        const settingsDiv = document.createElement('div');
+        settingsDiv.appendChild(makeOpenSettingsButton());
+        pickDiv.appendChild(settingsDiv);
+
+        const ceTableDiv = document.createElement('div');
+        ceTableDiv.appendChild(makeCeArrowToggle());
+        ceTableDiv.appendChild(makeTotalsDiv());
+        ceTableDiv.appendChild(makeCePickTable());
+        pickDiv.appendChild(ceTableDiv);
+
+        const tsoTableDiv = document.createElement('div');
+        tsoTableDiv.appendChild(makeTsoArrowToggle());
+        tsoTableDiv.appendChild(makeTsoPickTable());
+        pickDiv.appendChild(tsoTableDiv);
+
+        const vretsTableDiv = document.createElement('div');
+        vretsTableDiv.appendChild(makeVretsArrowToggle());
+        vretsTableDiv.appendChild(makeVretsPickTable());
+        pickDiv.appendChild(vretsTableDiv);
 
         return pickDiv;
     }
@@ -701,6 +739,274 @@ function loadScript(data) {
         return ceTable;
     }
 
+    function makeTotalsDiv() {
+        const div = document.createElement('div');
+        div.setAttribute('id', 'pick-totals-div');
+
+        const activeDiv = document.createElement('div');
+        activeDiv.title = 'Active picker total does not take HOV paths into account.';
+        activeDiv.style.cursor = 'help';
+        activeDiv.setAttribute('id', 'active-div');
+        const activeTitleDiv = document.createElement('div');
+        activeTitleDiv.textContent = 'Active Pickers';
+        activeTitleDiv.style.color = 'grey';
+        activeDiv.appendChild(activeTitleDiv);
+        const activePickers = document.createElement('div');
+        activePickers.setAttribute('id', 'active-pickers-div');
+
+        activeDiv.appendChild(activePickers);
+
+        div.appendChild(activeDiv);
+
+        const setDiv = document.createElement('div');
+        setDiv.setAttribute('id', 'set-div');
+        setDiv.title = 'Planned picker total does not take HOV paths into account.';
+        setDiv.style.cursor = 'help';
+        const setTitleDiv = document.createElement('div');
+        setTitleDiv.textContent = 'Planned Pickers';
+        setTitleDiv.style.color = 'grey';
+        setDiv.appendChild(setTitleDiv);
+        const setPickers = document.createElement('div');
+        setPickers.setAttribute('id', 'set-pickers-div');
+        setDiv.appendChild(setPickers);
+        div.appendChild(setDiv);
+
+        return div;
+    }
+
+    function makeTsoPickTable() {
+        const tsoTable = document.createElement('table');
+        tsoTable.setAttribute('id', 'tso-table');
+        const titleRow = document.createElement('tr');
+        titleRow.style.fontSize = '2rem';
+        titleRow.style.color = 'white';
+        titleRow.style.backgroundColor = '#8B5CF6';
+        titleRow.style.border = '1px solid black';
+        titleRow.style.borderBottom = 'none';
+        const titleHeader = document.createElement('th');
+        titleHeader.classList.add('table-header');
+        titleHeader.textContent = 'TSO Paths';
+        titleHeader.colSpan = '9';
+        titleRow.appendChild(titleHeader);
+        tsoTable.appendChild(titleRow);
+
+        const categoriesRow = document.createElement('tr');
+        categoriesRow.style.fontSize = '1.5rem';
+        categoriesRow.style.color = 'white';
+        categoriesRow.style.backgroundColor = '#8B5CF6';
+        categoriesRow.style.borderLeft = '1px solid black';
+        categoriesRow.style.borderRight = '1px solid black';
+
+        const td1 = makeHeaderTd('Process Path');
+        categoriesRow.appendChild(td1);
+        const td2 = makeHeaderTd('BL');
+        categoriesRow.appendChild(td2);
+        const td3 = makeHeaderTd('Active Pickers');
+        categoriesRow.appendChild(td3);
+        const td4 = makeHeaderTd('Planned Pickers');
+        categoriesRow.appendChild(td4);
+        const td5 = makeHeaderTd('Delta');
+        categoriesRow.appendChild(td5);
+        const td6 = makeHeaderTd('Deviation');
+        categoriesRow.appendChild(td6);
+        const td7 = makeHeaderTd('Actual TUR');
+        categoriesRow.appendChild(td7);
+        const td8 = makeHeaderTd('Set TUR');
+        categoriesRow.appendChild(td8);
+        const td9 = makeHeaderTd('Status');
+        categoriesRow.appendChild(td9);
+        tsoTable.appendChild(categoriesRow);
+
+        return tsoTable;
+    }
+
+    function makeVretsPickTable() {
+        const vretsTable = document.createElement('table');
+        vretsTable.setAttribute('id', 'vrets-table');
+        // by default vrets table is hidden on load
+        vretsTable.style.display = 'none';
+        const titleRow = document.createElement('tr');
+        titleRow.style.fontSize = '2rem';
+        titleRow.style.color = 'white';
+        titleRow.style.backgroundColor = '#10B981';
+        titleRow.style.border = '1px solid black';
+        titleRow.style.borderBottom = 'none';
+        const titleHeader = document.createElement('th');
+        titleHeader.classList.add('table-header');
+        titleHeader.textContent = 'Vrets Paths';
+        titleHeader.colSpan = '9';
+        titleRow.appendChild(titleHeader);
+        vretsTable.appendChild(titleRow);
+
+        const categoriesRow = document.createElement('tr');
+        categoriesRow.style.fontSize = '1.5rem';
+        categoriesRow.style.color = 'white';
+        categoriesRow.style.backgroundColor = '#10B981';
+        categoriesRow.style.borderLeft = '1px solid black';
+        categoriesRow.style.borderRight = '1px solid black';
+
+        const td1 = makeHeaderTd('Process Path');
+        categoriesRow.appendChild(td1);
+        const td2 = makeHeaderTd('BL');
+        categoriesRow.appendChild(td2);
+        const td3 = makeHeaderTd('Active Pickers');
+        categoriesRow.appendChild(td3);
+        const td4 = makeHeaderTd('Planned Pickers');
+        categoriesRow.appendChild(td4);
+        const td5 = makeHeaderTd('Delta');
+        categoriesRow.appendChild(td5);
+        const td6 = makeHeaderTd('Deviation');
+        categoriesRow.appendChild(td6);
+        const td7 = makeHeaderTd('Actual TUR');
+        categoriesRow.appendChild(td7);
+        const td8 = makeHeaderTd('Set TUR');
+        categoriesRow.appendChild(td8);
+        const td9 = makeHeaderTd('Status');
+        categoriesRow.appendChild(td9);
+        vretsTable.appendChild(categoriesRow);
+
+        return vretsTable;
+    }
+
+    function makeCeArrowToggle() {
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+
+        const button = document.createElement('button');
+        button.style.cssText += `
+            font-size: 1.1rem;
+            color: #645e5e;
+            background-color: transparent;
+            border: none;
+            display: flex;
+            gap: 1rem;
+            cursor: pointer;
+        `
+        button.textContent = '▼';
+        div.appendChild(button);
+
+        button.addEventListener('click', (e) => {
+            const totalsDiv = document.getElementById('pick-totals-div');
+            const ceTable = document.getElementById('ce-table');
+            if (e.target.textContent.includes('▼')) {
+                e.target.textContent = '▶';
+                const span = document.createElement('span');
+                span.setAttribute('id', 'ce-span');
+                span.textContent = 'Toggle CE Table';
+                span.style.cssText += `
+                    color: #0073bb;
+                    font-weight: bold;
+                    font-size: 1.1rem;
+                `
+                div.appendChild(span);
+                totalsDiv.style.display = 'none';
+                ceTable.style.display = 'none';
+            } else {
+                e.target.textContent = '▼';
+                let span = document.getElementById('ce-span');
+                span.remove();
+                totalsDiv.style.display = 'flex';
+                ceTable.style.display = 'flex';
+            }
+        })
+
+        return div;
+    }
+
+    function makeTsoArrowToggle() {
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+
+        const button = document.createElement('button');
+        button.style.cssText += `
+            font-size: 1.1rem;
+            color: #645e5e;
+            background-color: transparent;
+            border: none;
+            display: flex;
+            gap: 1rem;
+            cursor: pointer;
+        `
+        button.textContent = '▼';
+        div.appendChild(button);
+
+        button.addEventListener('click', (e) => {
+            const tsoTable = document.getElementById('tso-table');
+            if (e.target.textContent.includes('▼')) {
+                e.target.textContent = '▶';
+                const span = document.createElement('span');
+                span.setAttribute('id', 'tso-span');
+                span.textContent = 'Toggle TSO Table';
+                span.style.cssText += `
+                    color: #0073bb;
+                    font-weight: bold;
+                    font-size: 1.1rem;
+                `
+                div.appendChild(span);
+                tsoTable.style.display = 'none';
+            } else {
+                e.target.textContent = '▼';
+                let span = document.getElementById('tso-span');
+                span.remove();
+                tsoTable.style.display = 'flex';
+            }
+        })
+
+        return div;
+    }
+
+    function makeVretsArrowToggle() {
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+
+        const button = document.createElement('button');
+        button.style.cssText += `
+            font-size: 1.1rem;
+            color: #645e5e;
+            background-color: transparent;
+            border: none;
+            display: flex;
+            gap: 1rem;
+            cursor: pointer;
+        `
+        button.textContent = '▶';
+        div.appendChild(button);
+
+        const span = document.createElement('span');
+        span.setAttribute('id', 'vrets-span');
+        span.textContent = 'Toggle Vrets Table';
+        span.style.cssText += `
+                    color: #0073bb;
+                    font-weight: bold;
+                    font-size: 1.1rem;
+                `
+        div.appendChild(span);
+
+        button.addEventListener('click', (e) => {
+            const vretsTable = document.getElementById('vrets-table');
+            if (e.target.textContent.includes('▼')) {
+                e.target.textContent = '▶';
+                const span = document.createElement('span');
+                span.setAttribute('id', 'vrets-span');
+                span.textContent = 'Toggle Vrets Table';
+                span.style.cssText += `
+                    color: #0073bb;
+                    font-weight: bold;
+                    font-size: 1.1rem;
+                `
+                div.appendChild(span);
+                vretsTable.style.display = 'none';
+            } else {
+                e.target.textContent = '▼';
+                let span = document.getElementById('vrets-span');
+                span.remove();
+                vretsTable.style.display = 'flex';
+            }
+        })
+
+        return div;
+    }
+
     function makePackTable() {
         const packTable = document.createElement('table');
         packTable.setAttribute('id', 'pack-table');
@@ -741,6 +1047,227 @@ function loadScript(data) {
         return packTable;
     }
 
+    function loadPickTableData() {
+        activePickersTotal = 0;
+        setPickersTotal = 0;
+        activeMultisTotal = 0;
+        setMultisTotal = 0;
+        activeSinglesTotal = 0;
+        setSinglesTotal = 0;
+
+        const ceTable = document.getElementById('ce-table');
+        getCePaths().forEach(pp => {
+            ceTable.appendChild(makeCeRow(pp));
+        });
+
+        const tsoTable = document.getElementById('tso-table');
+        getTsoPaths().forEach(pp => {
+            tsoTable.appendChild(makeOtherRow(pp));
+        })
+
+        const vretsTable = document.getElementById('vrets-table');
+        getVretsPaths().forEach(pp => {
+            vretsTable.appendChild(makeOtherRow(pp));
+        })
+    }
+
+    function makeCeRow(pp) {
+        const row = document.createElement('tr');
+        const setData = getSetData(pp);
+        const { openBatchQuantityLimit, pickRateAverage, status, unitRateTarget } = setData;
+        const setPra = pickRateAverage;
+        const setTur = unitRateTarget;
+
+        const activePathData = activeData[pp];
+        const { PickerCount, UnitsPerHour } = activePathData;
+        const activeTur = UnitsPerHour;
+
+        // name of path
+        const ppTd = makeLinkTd(pp);
+        ppTd.style.textAlign = 'left';
+        row.appendChild(ppTd);
+
+        // batch data
+        if (pp.includes('Multi') && !pp.includes('MultiCASEPallet')) {
+            const batchLimit = openBatchQuantityLimit;
+            const activeBatches = getActiveBatches(pp);
+            row.appendChild(makeTd(`${batchLimit}/${activeBatches}`));
+        } else {
+            row.appendChild(makeTd(''));
+        }
+
+        // active pickers
+        row.appendChild(makeTd(PickerCount));
+
+        //do not count HOV pickers or MultiCASEPallet as part of active picker total
+        if (!pp.includes('HOV') || !pp.includes('MultiCASEPallet')) {
+            activePickersTotal += PickerCount;
+        }
+
+        // planned pickers
+        let setPickers;
+        if ( setPra === 0 || setTur === 0) {
+            setPickers = 0;
+        } else {
+            // take 10 off of TUR as set pickers will round up and this will offset over counting by 1 from testing
+            setPickers = Math.ceil((parseInt(setTur - Math.floor(setPra * 0.9)))/setPra); //api does not have planned pickers so it is calculated by TUR/pick rate average
+        }
+        row.appendChild(makeTd(setPickers));
+
+        //do not count pp in planned pickers total if it's an HOV path or MultiCASEPallet as default hc is 10 which is always inaccurate
+        if (!pp.includes('HOV') || !pp.includes('MultiCASEPallet')) {
+            setPickersTotal += parseInt(setPickers);
+        } 
+
+        if (!pp.includes('HOV') && !pp.includes('Multi')) {
+            setSinglesTotal += parseInt(setPickers);
+            activeSinglesTotal += PickerCount;
+        }
+
+        // delta
+        const delta = PickerCount - setPickers;
+        const deltaTd = makeTd(delta);
+        deltaTd.textContent === 0 ? deltaTd.style.backgroundColor = '#22c55e' : deltaTd.style.backgroundColor = '#f87171';
+        row.appendChild(deltaTd);
+
+        // deviation percentage
+        const deviation = getDeviationPercent(PickerCount, setPickers);
+        row.appendChild(makeTd(deviation));
+
+        row.appendChild(makeTd(activeTur));
+
+        const turTd = makeTd(setTur);
+        if (pp.includes('PPHOV') || pp.includes('MultiCASEPallet')) {
+            turTd.textContent == 1000 ? turTd.style.backgroundColor = '#22c55e' : turTd.style.backgroundColor = '#f87171';
+            turTd.title = 'SW for all HOV paths is to set PRA/TUR to 100/1000. If set properly, TUR will highlight green; red if not set correctly';
+            turTd.style.cursor = 'help';
+        }
+        row.appendChild(turTd);
+
+        //api does not contain actual rate. it is calculated by UPH/active pickers
+        const activePra = getActualRate(activeTur, PickerCount);
+        row.appendChild(makeTd(activePra));
+        row.appendChild(makeTd(setPra));
+
+        const statusTd = makeTd(status);
+        statusTd.style.color = 'white';
+        statusTd.textContent === 'Active' ? statusTd.style.backgroundColor = '#22c55e' : statusTd.style.backgroundColor = 'red';
+        row.appendChild(statusTd);
+
+        return row;
+    }
+
+    function makeOtherRow(pp) {
+        const row = document.createElement('tr');
+        const setData = getSetData(pp);
+        const { openBatchQuantityLimit, pickRateAverage, status, unitRateTarget } = setData;
+        const setPra = pickRateAverage;
+        const setTur = unitRateTarget;
+
+        const activePathData = activeData[pp];
+        const { PickerCount, UnitsPerHour } = activePathData;
+        const activeTur = UnitsPerHour;
+
+        // name of path
+        const ppTd = makeLinkTd(pp);
+        ppTd.style.textAlign = 'left';
+        row.appendChild(ppTd);
+
+        // batch data
+        if (pp.includes('Multi') && !pp.includes('MultiCASEPallet')) {
+            const batchLimit = openBatchQuantityLimit;
+            const activeBatches = getActiveBatches(pp);
+            row.appendChild(makeTd(`${batchLimit}/${activeBatches}`));
+        } else {
+            row.appendChild(makeTd(''));
+        }
+
+        // active pickers
+        row.appendChild(makeTd(PickerCount));
+
+        //do not count HOV pickers or MultiCASEPallet as part of active picker total
+        if (!pp.includes('HOV') || !pp.includes('MultiCASEPallet')) {
+            activePickersTotal += PickerCount;
+        }
+
+        // planned pickers
+        let setPickers;
+        if (setTur === 0) {
+            setPickers = 0;
+        } else if (setPra === 0) {
+            setPickers = 1;
+        } else {
+            // take 10 off of TUR as set pickers will round up and this will offset over counting by 1 from testing
+            setPickers = Math.ceil((parseInt(setTur - Math.floor(setPra * 0.9)))/setPra); //api does not have planned pickers so it is calculated by TUR/pick rate average
+        }
+        row.appendChild(makeTd(setPickers));
+
+        //do not count pp in planned pickers total if it's an HOV path or MultiCASEPallet as default hc is 10 which is always inaccurate
+        if (!pp.includes('HOV') || !pp.includes('MultiCASEPallet')) {
+            setPickersTotal += parseInt(setPickers);
+        } 
+
+        if (!pp.includes('HOV') && !pp.includes('Multi')) {
+            setSinglesTotal += parseInt(setPickers);
+            activeSinglesTotal += PickerCount;
+        }
+
+        // delta
+        const delta = PickerCount - setPickers;
+        const deltaTd = makeTd(delta);
+        deltaTd.textContent === 0 ? deltaTd.style.backgroundColor = '#22c55e' : deltaTd.style.backgroundColor = '#f87171';
+        row.appendChild(deltaTd);
+
+        // deviation percentage
+        const deviation = getDeviationPercent(PickerCount, setPickers);
+        row.appendChild(makeTd(deviation));
+
+        row.appendChild(makeTd(activeTur));
+
+        const turTd = makeTd(setTur);
+        row.appendChild(turTd);
+
+        const statusTd = makeTd(status);
+        statusTd.style.color = 'white';
+        statusTd.textContent === 'Active' ? statusTd.style.backgroundColor = '#22c55e' : statusTd.style.backgroundColor = 'red';
+        row.appendChild(statusTd);
+
+        return row;
+    }
+
+    function makeLinkTd(pp) {
+        const td = document.createElement('td');
+        td.classList.add('row-td');
+
+        
+        const a = document.createElement('a');
+        a.textContent = pp;
+        a.href = `https://process-path.na.picking.aft.a2z.com/fc/${fc}/properties/process-path/${pp}`;
+        td.appendChild(a);
+
+        return td;
+    }
+
+    // returns an object with all set data
+    function getSetData(pp) {
+        for (let path of setData) {
+            if (path.processPathName === pp) {
+                return path;
+            }
+        }
+    }
+
+    function getActiveBatches(pp) {
+        let batchCount = 0;
+        for (let batch of batchData) {
+            if (batch.processPath === pp) {
+                batchCount++;
+            }
+        }
+
+        return batchCount;
+    }
+
     function loadPackTableData() {
         const packTable = document.getElementById('pack-table');
         for (const [key, value] of Object.entries(packHeadcounts)) {
@@ -750,6 +1277,13 @@ function loadScript(data) {
             const tr = makePackTableRow(key, value);
             packTable.appendChild(tr);
         }
+    }
+
+    function getActualRate(tur, activePickers) {
+        if (parseInt(tur) === 0 || activePickers === 0) {
+            return 'N/A';
+        }
+        return Math.round(parseInt(tur) / parseInt(activePickers));
     }
 
     function makePackTableRow(packGroup, hc) {
@@ -922,6 +1456,15 @@ function loadScript(data) {
     function closeSettings() {
         const overlay = document.getElementById('overlay');
         overlay.style.display = 'none';
+
+        // reset div for updated data
+        const masterDiv = document.getElementById('master-div');
+        const pickDiv = document.getElementById('pick-div');
+        pickDiv.remove();
+        const newPickDiv = makePickDiv();
+        newPickDiv.setAttribute('id', 'pick-div');
+        masterDiv.prepend(newPickDiv);
+        loadPickTableData();
     }
 
     function loadCurrentCePaths(list) {
