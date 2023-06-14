@@ -88,6 +88,9 @@ function loadScript(data) {
     const tsoSelectedPaths = [];
     const vretsSelectedPaths = [];
 
+    // used for styling path row
+    let pathRow = 0;
+
     // totals used for the summary table
     let activePickersTotal = 0;
     let setPickersTotal = 0;
@@ -303,7 +306,7 @@ function loadScript(data) {
         const packDiv = makePackDiv();
         const packTable = makePackTable();
         packDiv.appendChild(packTable);
-        masterDiv.appendChild(packTable);
+        masterDiv.appendChild(packDiv);
 
         parentDiv.prepend(masterDiv);
     }
@@ -690,12 +693,20 @@ function loadScript(data) {
     function makeCePickTable() {
         const ceTable = document.createElement('table');
         ceTable.setAttribute('id', 'ce-table');
+        ceTable.style.cssText += `
+            text-align: center;
+            border-collapse: collapse;
+        `
+
         const titleRow = document.createElement('tr');
-        titleRow.style.fontSize = '2rem';
-        titleRow.style.color = 'white';
-        titleRow.style.backgroundColor = '#3b82f6';
-        titleRow.style.border = '1px solid black';
-        titleRow.style.borderBottom = 'none';
+        titleRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #3b82f6;
+            border: 1px solid black;
+            border-bottom: none;
+        `
+
         const titleHeader = document.createElement('th');
         titleHeader.classList.add('table-header');
         titleHeader.textContent = 'CE Paths';
@@ -704,11 +715,13 @@ function loadScript(data) {
         ceTable.appendChild(titleRow);
 
         const categoriesRow = document.createElement('tr');
-        categoriesRow.style.fontSize = '1.5rem';
-        categoriesRow.style.color = 'white';
-        categoriesRow.style.backgroundColor = '#3b82f6';
-        categoriesRow.style.borderLeft = '1px solid black';
-        categoriesRow.style.borderRight = '1px solid black';
+        categoriesRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #3b82f6;
+            border-left: 1px solid black;
+            border-right: 1px solid black;
+        `
 
         const td1 = makeHeaderTd('Process Path');
         categoriesRow.appendChild(td1);
@@ -777,26 +790,33 @@ function loadScript(data) {
     function makeTsoPickTable() {
         const tsoTable = document.createElement('table');
         tsoTable.setAttribute('id', 'tso-table');
+        tsoTable.style.cssText += `
+            text-align: center;
+            border-collapse: collapse;
+        `
+
         const titleRow = document.createElement('tr');
-        titleRow.style.fontSize = '2rem';
-        titleRow.style.color = 'white';
-        titleRow.style.backgroundColor = '#8B5CF6';
-        titleRow.style.border = '1px solid black';
-        titleRow.style.borderBottom = 'none';
+        titleRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #8B5CF6;
+            border: 1px solid black;
+            border-bottom: none;
+        `
         const titleHeader = document.createElement('th');
-        titleHeader.classList.add('table-header');
-        titleHeader.textContent = 'TSO Paths';
+        titleHeader.textContent = 'Tso Paths';
         titleHeader.colSpan = '9';
         titleRow.appendChild(titleHeader);
         tsoTable.appendChild(titleRow);
 
         const categoriesRow = document.createElement('tr');
-        categoriesRow.style.fontSize = '1.5rem';
-        categoriesRow.style.color = 'white';
-        categoriesRow.style.backgroundColor = '#8B5CF6';
-        categoriesRow.style.borderLeft = '1px solid black';
-        categoriesRow.style.borderRight = '1px solid black';
-
+        categoriesRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #8B5CF6;
+            border-left: 1px solid black;
+            border-right: 1px solid black;
+        `
         const td1 = makeHeaderTd('Process Path');
         categoriesRow.appendChild(td1);
         const td2 = makeHeaderTd('BL');
@@ -823,28 +843,34 @@ function loadScript(data) {
     function makeVretsPickTable() {
         const vretsTable = document.createElement('table');
         vretsTable.setAttribute('id', 'vrets-table');
-        // by default vrets table is hidden on load
-        vretsTable.style.display = 'none';
+        // by default vrets table is hidden
+        vretsTable.style.cssText += `
+            display: none;
+            text-align: center;
+            border-collapse: collapse;
+        `
         const titleRow = document.createElement('tr');
-        titleRow.style.fontSize = '2rem';
-        titleRow.style.color = 'white';
-        titleRow.style.backgroundColor = '#10B981';
-        titleRow.style.border = '1px solid black';
-        titleRow.style.borderBottom = 'none';
+        titleRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #10B981;
+            border: 1px solid black;
+            border-bottom: none;
+        `
         const titleHeader = document.createElement('th');
-        titleHeader.classList.add('table-header');
         titleHeader.textContent = 'Vrets Paths';
         titleHeader.colSpan = '9';
         titleRow.appendChild(titleHeader);
         vretsTable.appendChild(titleRow);
 
         const categoriesRow = document.createElement('tr');
-        categoriesRow.style.fontSize = '1.5rem';
-        categoriesRow.style.color = 'white';
-        categoriesRow.style.backgroundColor = '#10B981';
-        categoriesRow.style.borderLeft = '1px solid black';
-        categoriesRow.style.borderRight = '1px solid black';
-
+        categoriesRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #10B981;
+            border-left: 1px solid black;
+            border-right: 1px solid black;
+        `
         const td1 = makeHeaderTd('Process Path');
         categoriesRow.appendChild(td1);
         const td2 = makeHeaderTd('BL');
@@ -906,7 +932,7 @@ function loadScript(data) {
                 let span = document.getElementById('ce-span');
                 span.remove();
                 totalsDiv.style.display = 'flex';
-                ceTable.style.display = 'flex';
+                ceTable.style.display = 'block';
             }
         })
 
@@ -948,7 +974,7 @@ function loadScript(data) {
                 e.target.textContent = '▼';
                 let span = document.getElementById('tso-span');
                 span.remove();
-                tsoTable.style.display = 'flex';
+                tsoTable.style.display = 'block';
             }
         })
 
@@ -1000,7 +1026,7 @@ function loadScript(data) {
                 e.target.textContent = '▼';
                 let span = document.getElementById('vrets-span');
                 span.remove();
-                vretsTable.style.display = 'flex';
+                vretsTable.style.display = 'block';
             }
         })
 
@@ -1008,27 +1034,40 @@ function loadScript(data) {
     }
 
     function makePackTable() {
+        // get heights of pick table div elements to make pick and pack tables even in height
+        const settingsBtnHeight = document.getElementById('settings-btn').offsetHeight;
+        const activePickersDivHeight = document.getElementById('active-div').offsetHeight;
         const packTable = document.createElement('table');
         packTable.setAttribute('id', 'pack-table');
+        packTable.style.cssText += `
+            margin-top: ${settingsBtnHeight + activePickersDivHeight + 100}px;
+            text-align: center;
+            border-collapse: collapse;
+        `
+        packTable.style.marginTop = `${settingsBtnHeight + activePickersDivHeight}`;
         const titleRow = document.createElement('tr');
-        titleRow.style.fontSize = '2rem';
-        titleRow.style.color = 'white';
-        titleRow.style.backgroundColor = '#3b82f6';
-        titleRow.style.border = '1px solid black';
-        titleRow.style.borderBottom = 'none';
+        titleRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #3b82f6;
+            border: 1px solid black;
+            border-bottom: none;
+        `
         const titleHeader = document.createElement('th');
         titleHeader.classList.add('table-header');
         titleHeader.textContent = `Pack hcs in the last 15 minutes`;
-        titleHeader.colSpan = '11';
+        titleHeader.colSpan = '5';
         titleRow.appendChild(titleHeader);
         packTable.appendChild(titleRow);
 
         const categoriesRow = document.createElement('tr');
-        categoriesRow.style.fontSize = '1.5rem';
-        categoriesRow.style.color = 'white';
-        categoriesRow.style.backgroundColor = '#3b82f6';
-        categoriesRow.style.borderLeft = '1px solid black';
-        categoriesRow.style.borderRight = '1px solid black';
+        categoriesRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #3b82f6;
+            border-left: 1px solid black;
+            border-right: 1px solid black;
+        `
 
         const td1 = makeHeaderTd('Pack Group');
         categoriesRow.appendChild(td1);
@@ -1059,20 +1098,28 @@ function loadScript(data) {
         getCePaths().forEach(pp => {
             ceTable.appendChild(makeCeRow(pp));
         });
+        pathRow = 0;
 
         const tsoTable = document.getElementById('tso-table');
         getTsoPaths().forEach(pp => {
             tsoTable.appendChild(makeOtherRow(pp));
         })
+        pathRow = 0;
 
         const vretsTable = document.getElementById('vrets-table');
         getVretsPaths().forEach(pp => {
             vretsTable.appendChild(makeOtherRow(pp));
         })
+        pathRow = 0;
     }
 
     function makeCeRow(pp) {
         const row = document.createElement('tr');
+        row.style.cssText += `
+            border: 1px solid black;
+        `
+        pathRow % 2 === 0 ? row.style.backgroundColor = '#f4f4f5' : 'white'; //every other row is light gray
+
         const setData = getSetData(pp);
         const { openBatchQuantityLimit, pickRateAverage, status, unitRateTarget } = setData;
         const setPra = pickRateAverage;
@@ -1127,7 +1174,7 @@ function loadScript(data) {
         // delta
         const delta = PickerCount - setPickers;
         const deltaTd = makeTd(delta);
-        deltaTd.textContent === 0 ? deltaTd.style.backgroundColor = '#22c55e' : deltaTd.style.backgroundColor = '#f87171';
+        deltaTd.textContent == 0 ? deltaTd.style.backgroundColor = '#22c55e' : deltaTd.style.backgroundColor = '#f87171';
         row.appendChild(deltaTd);
 
         // deviation percentage
@@ -1154,11 +1201,17 @@ function loadScript(data) {
         statusTd.textContent === 'Active' ? statusTd.style.backgroundColor = '#22c55e' : statusTd.style.backgroundColor = 'red';
         row.appendChild(statusTd);
 
+        pathRow++;
         return row;
     }
 
     function makeOtherRow(pp) {
         const row = document.createElement('tr');
+        row.style.cssText += `
+            border: 1px solid black;
+        `
+        pathRow % 2 === 0 ? row.style.backgroundColor = '#f4f4f5' : 'white'; //every other row is light gray
+
         const setData = getSetData(pp);
         const { openBatchQuantityLimit, pickRateAverage, status, unitRateTarget } = setData;
         const setPra = pickRateAverage;
@@ -1235,19 +1288,6 @@ function loadScript(data) {
         return row;
     }
 
-    function makeLinkTd(pp) {
-        const td = document.createElement('td');
-        td.classList.add('row-td');
-
-        
-        const a = document.createElement('a');
-        a.textContent = pp;
-        a.href = `https://process-path.na.picking.aft.a2z.com/fc/${fc}/properties/process-path/${pp}`;
-        td.appendChild(a);
-
-        return td;
-    }
-
     // returns an object with all set data
     function getSetData(pp) {
         for (let path of setData) {
@@ -1304,7 +1344,7 @@ function loadScript(data) {
 
         const delta = hc - plannedPackers;
         const deltaTd = makeTd(delta);
-        deltaTd.style.backgroundColor = delta === 0 ? '#22c55e' : '#f87171';
+        deltaTd.style.backgroundColor = delta == 0 ? '#22c55e' : '#f87171';
         tr.appendChild(deltaTd);
 
         const deviationPercent = getDeviationPercent(hc, plannedPackers);
@@ -1317,6 +1357,56 @@ function loadScript(data) {
     function makeTd(data) {
         const td = document.createElement('td');
         td.textContent = data;
+        td.style.cssText += `
+            border: 1px solid black;
+            padding: 1px 5px;
+            font-size: 1rem;
+        `
+
+        return td;
+    }
+
+    function makeLinkTd(pp) {
+        const td = document.createElement('td');
+        td.style.cssText += `
+            border: 1px solid black;
+            padding-left: 0.4rem;
+            padding-right: 2rem;
+        `
+
+        const a = document.createElement('a');
+        a.textContent = pp;
+        a.style.cssText += `
+            text-decoration: none;
+            color: black;
+            cursor: pointer;
+            border: medium none;
+            font-size: 1rem;
+        `
+
+        a.onmouseover = () => a.style.cssText += `
+            color: blue;
+            border-bottom: 1px solid blue;
+        `
+
+        a.onmouseleave = () => a.style.cssText += `
+            color: black;
+            border: none;
+        `
+        a.href = `https://process-path.na.picking.aft.a2z.com/fc/${fc}/properties/process-path/${pp}`;
+        td.appendChild(a);
+
+        return td;
+    }
+
+    function makeHeaderTd(str) {
+        const td = document.createElement('td');
+        td.textContent = str;
+        td.style.cssText += `
+            padding: 0 1rem;
+            font-size: 1rem;
+            font-weight: bold;
+        `
 
         return td;
     }
@@ -1326,27 +1416,25 @@ function loadScript(data) {
     // when user changes the input, automatically save new input in local storage
     // the key is saved as fc-packGroup as leads run multiple sites
     function makeInputTd(packGroup) {
-        const td = document.createElement('td');
         const input = document.createElement('input');
+        input.style.cssText += `
+            height: 2rem;
+            font-size: 1rem;
+            width: 4rem;
+            text-align: center;
+        `
         if (localStorage.getItem(`${fc}-${packGroup}`)) {
             input.value = localStorage.getItem(`${fc}-${packGroup}`);
         } else {
-            input.value = 0;
+            input.value = '';
+            input.style.backgroundColor = 'yellow';
         }
 
         input.addEventListener('change', (e) => {
             localStorage.setItem(`${fc}-${packGroup}`, e.target.value);
         })
-        td.appendChild(input);
 
-        return td;
-    }
-
-    function makeHeaderTd(str) {
-        const td = document.createElement('td');
-        td.classList.add('header-td');
-        td.textContent = str;
-        return td;
+        return input;
     }
 
     function getDeviationPercent(activePackers, plannedPackers) {
@@ -1597,15 +1685,15 @@ function loadScript(data) {
 
 }
 
-/*
-    current is settings div 
-*/
-
-
 /* to dos
 
-display pick table
+add pick summary table 
+add pick total hcs at top
+add pack total hcs vs plan
+when user inputs pack hcs, prompt a saved text
+go through sites, find the unique pack paths and only enable for those sites
 add flags if noncon processed in BOD or vice versa
-add auto refresh
+add auto refresh with last refreshed time
+reload pack table whenever inputs change
 
 */
