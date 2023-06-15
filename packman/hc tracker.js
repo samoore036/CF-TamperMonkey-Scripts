@@ -74,9 +74,6 @@ function loadScript(data) {
     } else {
         batchData = null;
     }
-    console.log(activeData);
-    console.log(setData);
-    console.log(batchData);
 
     /*----------------/
     -global variables-
@@ -191,6 +188,7 @@ function loadScript(data) {
     
     loadPickTableData();
     loadPackTableData();
+    loadTotalsData();
 
     // there is no get api so must iterate over the DOM and create an object with each packer's information to then parse
 
@@ -662,13 +660,25 @@ function loadScript(data) {
     function makePickDiv() {
         const pickDiv = document.createElement('div');
         const settingsDiv = document.createElement('div');
+        settingsDiv.setAttribute('id', 'settings-btn-div');
+        settingsDiv.style.cssText += `
+            display: flex;
+            justify-content: end;
+        `
         settingsDiv.appendChild(makeOpenSettingsButton());
         pickDiv.appendChild(settingsDiv);
 
         const ceTableDiv = document.createElement('div');
+        ceTableDiv.setAttribute('id', 'ce-table-div');
+        ceTableDiv.style.cssText += `
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        `
         ceTableDiv.appendChild(makeCeArrowToggle());
-        ceTableDiv.appendChild(makeTotalsDiv());
+        ceTableDiv.appendChild(makePickTotalsDiv());
         ceTableDiv.appendChild(makeCePickTable());
+        ceTableDiv.appendChild(makePickSummaryDiv());
         pickDiv.appendChild(ceTableDiv);
 
         const tsoTableDiv = document.createElement('div');
@@ -688,6 +698,64 @@ function loadScript(data) {
         const packDiv = document.createElement('div');
 
         return packDiv;
+    }
+
+    function makePickTotalsDiv() {
+        const div = document.createElement('div');
+        div.setAttribute('id', 'pick-totals-div');
+        div.style.cssText += `
+            align-self: center;
+            display: flex;
+            gap: 3rem;
+        `
+
+        const activeDiv = document.createElement('div');
+        activeDiv.title = 'Active picker total does not take HOV paths into account.';
+        activeDiv.style.cssText += `
+            cursor: help;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        `
+        activeDiv.setAttribute('id', 'active-div');
+        const activeTitleDiv = document.createElement('div');
+        activeTitleDiv.textContent = 'Active Pickers';
+        activeTitleDiv.style.cssText += `
+            font-size: 0.9rem;
+            color: grey;
+        `
+        activeDiv.appendChild(activeTitleDiv);
+        const activePickers = document.createElement('div');
+        activePickers.setAttribute('id', 'active-pickers-div');
+        activePickers.style.fontSize = '2.5rem';
+
+        activeDiv.appendChild(activePickers);
+
+        div.appendChild(activeDiv);
+
+        const setDiv = document.createElement('div');
+        setDiv.setAttribute('id', 'set-div');
+        setDiv.title = 'Planned picker total does not take HOV paths into account.';
+        setDiv.style.cssText += `
+            cursor: help;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        `
+        const setTitleDiv = document.createElement('div');
+        setTitleDiv.textContent = 'Planned Pickers';
+        setTitleDiv.style.cssText += `
+            font-size: 0.9rem;
+            color: grey;
+        `
+        setDiv.appendChild(setTitleDiv);
+        const setPickers = document.createElement('div');
+        setPickers.setAttribute('id', 'set-pickers-div');
+        setPickers.style.fontSize = '2.5rem';
+        setDiv.appendChild(setPickers);
+        div.appendChild(setDiv);
+
+        return div;
     }
 
     function makeCePickTable() {
@@ -752,37 +820,111 @@ function loadScript(data) {
         return ceTable;
     }
 
-    function makeTotalsDiv() {
+    function makePickSummaryDiv() {
+        const summaryDiv = document.createElement('div');
+        summaryDiv.setAttribute('id', 'summary-div');
+        summaryDiv.style.cssText += `
+            display: flex; 
+            gap: 2vw; 
+            align-self: center;
+            height: 6rem;
+        `
+        summaryDiv.appendChild(makeMultisSummaryDiv());
+        summaryDiv.appendChild(makeSinglesSummaryDiv());
+
+        return summaryDiv;
+    }
+
+    function makeMultisSummaryDiv() {
         const div = document.createElement('div');
-        div.setAttribute('id', 'pick-totals-div');
+        div.title = 'Includes all multis paths listed above';
+        div.style.cssText += `
+        cursor: help; display: flex; align-items: center; gap: 1vw;
+        border: 2px solid black;
+        font-size: 1rem;
+        `
+        const titleDiv = document.createElement('div');
+        titleDiv.textContent = 'Multis Totals';
+        titleDiv.style.cssText += `
+        padding-left: 0.5vw;
+        `
+        div.appendChild(titleDiv);
 
-        const activeDiv = document.createElement('div');
-        activeDiv.title = 'Active picker total does not take HOV paths into account.';
-        activeDiv.style.cursor = 'help';
-        activeDiv.setAttribute('id', 'active-div');
-        const activeTitleDiv = document.createElement('div');
-        activeTitleDiv.textContent = 'Active Pickers';
-        activeTitleDiv.style.color = 'grey';
-        activeDiv.appendChild(activeTitleDiv);
-        const activePickers = document.createElement('div');
-        activePickers.setAttribute('id', 'active-pickers-div');
+        const categoryDivs = document.createElement('div');
+        categoryDivs.style.cssText += `
+        display: flex;
+        flex-direction: column;
+        border-left: 2px solid black;
+        padding-left: 1rem;
+        padding-right: 0.5vw;
+        `
+        const activeTotalDiv = document.createElement('div');
+        activeTotalDiv.setAttribute('id', 'multis-active-div');
+        activeTotalDiv.style.lineHeight = '20px';
+        categoryDivs.appendChild(activeTotalDiv);
 
-        activeDiv.appendChild(activePickers);
+        const setTotalDiv = document.createElement('div');
+        setTotalDiv.setAttribute('id', 'multis-set-div');
+        setTotalDiv.style.lineHeight = '20px';
+        categoryDivs.appendChild(setTotalDiv);
 
-        div.appendChild(activeDiv);
+        const deltaDiv = document.createElement('div');
+        deltaDiv.setAttribute('id', 'multis-delta-div');
+        deltaDiv.style.lineHeight = '20px';
+        categoryDivs.appendChild(deltaDiv);
 
-        const setDiv = document.createElement('div');
-        setDiv.setAttribute('id', 'set-div');
-        setDiv.title = 'Planned picker total does not take HOV paths into account.';
-        setDiv.style.cursor = 'help';
-        const setTitleDiv = document.createElement('div');
-        setTitleDiv.textContent = 'Planned Pickers';
-        setTitleDiv.style.color = 'grey';
-        setDiv.appendChild(setTitleDiv);
-        const setPickers = document.createElement('div');
-        setPickers.setAttribute('id', 'set-pickers-div');
-        setDiv.appendChild(setPickers);
-        div.appendChild(setDiv);
+        const deviationDiv = document.createElement('div');
+        deviationDiv.setAttribute('id', 'multis-deviation-div');
+        deviationDiv.style.lineHeight = '20px';
+        categoryDivs.appendChild(deviationDiv);
+        div.appendChild(categoryDivs);
+
+        return div;
+    }
+
+    function makeSinglesSummaryDiv() {
+        const div = document.createElement('div');
+        div.title = 'Includes all paths listed above that are not multis or HOV';
+        div.style.cssText += `
+        cursor: help; display: flex; align-items: center; gap: 1vw;
+        border: 2px solid black;
+        font-size: 1rem;
+        `
+        const titleDiv = document.createElement('div');
+        titleDiv.textContent = 'Singles Totals';
+        titleDiv.style.cssText += `
+        padding-left: 0.5vw;
+        `
+        div.appendChild(titleDiv);
+        
+        const categoryDivs = document.createElement('div');
+        categoryDivs.style.cssText += `
+        display: flex; flex-direction: column;
+        border-left: 2px solid black;
+        padding-left: 1rem;
+        padding-right: 0.5vw;
+        `
+        categoryDivs.style.cssText += 'display: flex; flex-direction: column;'
+        const activeTotalDiv = document.createElement('div');
+        activeTotalDiv.setAttribute('id', 'singles-active-div');
+        activeTotalDiv.style.lineHeight = '20px';
+        categoryDivs.appendChild(activeTotalDiv);
+
+        const setTotalDiv = document.createElement('div');
+        setTotalDiv.setAttribute('id', 'singles-set-div');
+        setTotalDiv.style.lineHeight = '20px';
+        categoryDivs.appendChild(setTotalDiv);
+
+        const deltaDiv = document.createElement('div');
+        deltaDiv.setAttribute('id', 'singles-delta-div');
+        deltaDiv.style.lineHeight = '20px';
+        categoryDivs.appendChild(deltaDiv);
+
+        const deviationDiv = document.createElement('div');
+        deviationDiv.setAttribute('id', 'singles-deviation-div');
+        deviationDiv.style.lineHeight = '20px';
+        categoryDivs.appendChild(deviationDiv);
+        div.appendChild(categoryDivs);
 
         return div;
     }
@@ -1125,6 +1267,15 @@ function loadScript(data) {
         const setPra = pickRateAverage;
         const setTur = unitRateTarget;
 
+        // planned pickers
+        let setPickers;
+        if ( setPra === 0 || setTur === 0) {
+            setPickers = 0;
+        } else {
+            // take 10 off of TUR as set pickers will round up and this will offset over counting by 1 from testing
+            setPickers = Math.ceil((parseInt(setTur - Math.floor(setPra * 0.9)))/setPra); //api does not have planned pickers so it is calculated by TUR/pick rate average
+        }
+
         const activePathData = activeData[pp];
         const { PickerCount, UnitsPerHour } = activePathData;
         const activeTur = UnitsPerHour;
@@ -1139,6 +1290,8 @@ function loadScript(data) {
             const batchLimit = openBatchQuantityLimit;
             const activeBatches = getActiveBatches(pp);
             row.appendChild(makeTd(`${batchLimit}/${activeBatches}`));
+            setMultisTotal += parseInt(setPickers);
+            activeMultisTotal += parseInt(PickerCount);
         } else {
             row.appendChild(makeTd(''));
         }
@@ -1151,22 +1304,14 @@ function loadScript(data) {
             activePickersTotal += PickerCount;
         }
 
-        // planned pickers
-        let setPickers;
-        if ( setPra === 0 || setTur === 0) {
-            setPickers = 0;
-        } else {
-            // take 10 off of TUR as set pickers will round up and this will offset over counting by 1 from testing
-            setPickers = Math.ceil((parseInt(setTur - Math.floor(setPra * 0.9)))/setPra); //api does not have planned pickers so it is calculated by TUR/pick rate average
-        }
         row.appendChild(makeTd(setPickers));
 
         //do not count pp in planned pickers total if it's an HOV path or MultiCASEPallet as default hc is 10 which is always inaccurate
-        if (!pp.includes('HOV') || !pp.includes('MultiCASEPallet')) {
-            setPickersTotal += parseInt(setPickers);
+        if (!pp.includes('PPHOV') && !pp.includes('PPMultiCASEPallet')) {
+            setPickersTotal += setPickers;
         } 
 
-        if (!pp.includes('HOV') && !pp.includes('Multi')) {
+        if (!pp.includes('PPHOV') && !pp.includes('PPMulti')) {
             setSinglesTotal += parseInt(setPickers);
             activeSinglesTotal += PickerCount;
         }
@@ -1238,11 +1383,6 @@ function loadScript(data) {
         // active pickers
         row.appendChild(makeTd(PickerCount));
 
-        //do not count HOV pickers or MultiCASEPallet as part of active picker total
-        if (!pp.includes('HOV') || !pp.includes('MultiCASEPallet')) {
-            activePickersTotal += PickerCount;
-        }
-
         // planned pickers
         let setPickers;
         if (setTur === 0) {
@@ -1254,16 +1394,6 @@ function loadScript(data) {
             setPickers = Math.ceil((parseInt(setTur - Math.floor(setPra * 0.9)))/setPra); //api does not have planned pickers so it is calculated by TUR/pick rate average
         }
         row.appendChild(makeTd(setPickers));
-
-        //do not count pp in planned pickers total if it's an HOV path or MultiCASEPallet as default hc is 10 which is always inaccurate
-        if (!pp.includes('HOV') || !pp.includes('MultiCASEPallet')) {
-            setPickersTotal += parseInt(setPickers);
-        } 
-
-        if (!pp.includes('HOV') && !pp.includes('Multi')) {
-            setSinglesTotal += parseInt(setPickers);
-            activeSinglesTotal += PickerCount;
-        }
 
         // delta
         const delta = PickerCount - setPickers;
@@ -1416,12 +1546,17 @@ function loadScript(data) {
     // when user changes the input, automatically save new input in local storage
     // the key is saved as fc-packGroup as leads run multiple sites
     function makeInputTd(packGroup) {
+        const td = document.createElement('td');
+        td.style.cssText += `
+            border: 1px solid black;
+        `
         const input = document.createElement('input');
         input.style.cssText += `
             height: 2rem;
             font-size: 1rem;
             width: 4rem;
             text-align: center;
+            border: 1px solid;
         `
         if (localStorage.getItem(`${fc}-${packGroup}`)) {
             input.value = localStorage.getItem(`${fc}-${packGroup}`);
@@ -1433,15 +1568,19 @@ function loadScript(data) {
         input.addEventListener('change', (e) => {
             localStorage.setItem(`${fc}-${packGroup}`, e.target.value);
         })
+        td.appendChild(input);
 
-        return input;
+        return td;
     }
 
-    function getDeviationPercent(activePackers, plannedPackers) {
-        if (activePackers == 0) {
+    function getDeviationPercent(active, planned) {
+        if (active == 0) {
             return '100%';
         }
-        const deviationPercent = ((plannedPackers - activePackers) / plannedPackers) * 100 * -1;
+        if (planned == 0) {
+            return '-100%';
+        }
+        const deviationPercent = ((planned - active) / planned) * 100 * -1;
         return `${deviationPercent > 0 ? '+' : ''}${deviationPercent.toFixed(0)}%`;
     }
 
@@ -1523,6 +1662,38 @@ function loadScript(data) {
         return li;
     }
 
+    function loadTotalsData() {
+        const activeDiv = document.getElementById('active-pickers-div');
+        activeDiv.textContent = activePickersTotal;
+
+        const setDiv = document.getElementById('set-pickers-div');
+        setDiv.textContent = setPickersTotal;
+
+        const multisActiveDiv = document.getElementById('multis-active-div');
+        multisActiveDiv.textContent = `active: ${activeMultisTotal}`
+
+        const multisSetDiv = document.getElementById('multis-set-div');
+        multisSetDiv.textContent = `planned: ${setMultisTotal}`
+
+        const multisDeltaDiv = document.getElementById('multis-delta-div');
+        multisDeltaDiv.textContent = `delta: ${activeMultisTotal - setMultisTotal}`
+
+        const multisDeviationDiv = document.getElementById('multis-deviation-div');
+        multisDeviationDiv.textContent = `deviation: ${getDeviationPercent(activeMultisTotal, setMultisTotal)}`
+
+        const singlesActiveDiv = document.getElementById('singles-active-div');
+        singlesActiveDiv.textContent = `active: ${activeSinglesTotal}`
+
+        const singlesSetDiv = document.getElementById('singles-set-div');
+        singlesSetDiv.textContent = `planned: ${setSinglesTotal}`
+
+        const singlesDeltaDiv = document.getElementById('singles-delta-div');
+        singlesDeltaDiv.textContent = `delta: ${activeSinglesTotal - setSinglesTotal}`
+
+        const singlesDeviationDiv = document.getElementById('singles-deviation-div');
+        singlesDeviationDiv.textContent = `deviation: ${getDeviationPercent(activeSinglesTotal, setSinglesTotal)}`
+    }
+
     /*-----------------/
     -DOM element logic-
     /----------------*/
@@ -1553,6 +1724,7 @@ function loadScript(data) {
         newPickDiv.setAttribute('id', 'pick-div');
         masterDiv.prepend(newPickDiv);
         loadPickTableData();
+        loadTotalsData();
     }
 
     function loadCurrentCePaths(list) {
@@ -1656,6 +1828,7 @@ function loadScript(data) {
 
     // remove old DOM elements and insert updated ones. React would be nice to have here
     function updateCurrentLists() {
+        console.log('updating current lists and resetting dom');
         // reset the selected arrays
         freeSelectedPaths.length =0;
         ceSelectedPaths.length = 0;
@@ -1687,13 +1860,13 @@ function loadScript(data) {
 
 /* to dos
 
-add pick summary table 
-add pick total hcs at top
 add pack total hcs vs plan
 when user inputs pack hcs, prompt a saved text
 go through sites, find the unique pack paths and only enable for those sites
 add flags if noncon processed in BOD or vice versa
 add auto refresh with last refreshed time
 reload pack table whenever inputs change
+handle error
+Uncaught SyntaxError: JSON.parse: unexpected character at line 1 column 1 of the JSON data
 
 */
