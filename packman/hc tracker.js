@@ -187,11 +187,12 @@ function loadScript(data) {
     }
 
 
-    loadPackData();
+    
     
     makeDivs();
     
     loadPickTableData();
+    loadPackData();
     loadPackTableData();
     loadTotalsData();
 
@@ -224,9 +225,12 @@ function loadScript(data) {
         // reset counts first
         for (const packGroup in packHeadcounts) {
             packHeadcounts[packGroup] = 0;
+            console.log(packHeadcounts[packGroup]);
         }
+
         switch(fc) {
-            case 'CHA2': parseDataCha2(getPackData());
+            case 'CHA2': 
+            case 'SLC2': parseDataSioc(getPackData());
                 break;
             case 'FTW5': parseDataFtw5(getPackData());
                 break;
@@ -234,7 +238,6 @@ function loadScript(data) {
                 break;
             case 'PHX7': parseDataPhx7(getPackData());
                 break;
-            case 'SLC2': parseDataSlc2(getPackData());
                 break;
             case 'LGB6':
             case 'OKC2': 
@@ -251,7 +254,7 @@ function loadScript(data) {
         for (let i = 0; i < packData.length; i++) {
             const { processPath, packMode, workStation } = packData[i];
             // skip psolve
-            if (workStation.includes('POPS' || workStation.includes('pops'))) {
+            if (workStation.includes('POPS') || workStation.includes('pops') || workStation.includes('Psolve') || packMode.includes('pslip') || packMode.includes('pops')) {
                 continue;
             }
             if (processPath.includes('MCF')) {
@@ -267,14 +270,15 @@ function loadScript(data) {
                     packHeadcounts.multis++;
                     continue;
                 }
+                console.log(`${processPath} added to singles mcf`);
                 packHeadcounts.singles++;
                 continue;
             }
             if (processPath.includes('HOV')) {
-                if (packMode === 'singles') {
+                if (packMode === 'singles' && !workStation.includes('BOD')) {
                     packHeadcounts.singles++;
                     continue;
-                } else if (packMode.includes('singles_slam') && workStation.includes('BOD')) {
+                } else if (workStation.includes('BOD')) {
                     packHeadcounts.bod++;
                     continue;
                 } else {
@@ -283,6 +287,7 @@ function loadScript(data) {
                 }
             }
             if (processPath.includes('Single') && !processPath.includes('BOD') && !processPath.includes('NonCon') && !processPath.includes('SIOC') && !processPath.includes('HandTape')) {
+                console.log(`${processPath} added to singles`);
                 packHeadcounts.singles++;
                 continue;
             }
@@ -292,6 +297,7 @@ function loadScript(data) {
                 continue;
             }
             if (processPath.includes('NonCon') || processPath.includes('SIOC')) {
+                console.log(`${processPath} added to noncon`);
                 packHeadcounts.noncon++;
                 continue;
             }
@@ -302,11 +308,11 @@ function loadScript(data) {
         }
     }
 
-    function parseDataCha2(packData) {
+    function parseDataSioc(packData) {
         for (let i = 0; i < packData.length; i++) {
             const { processPath, packMode, workStation } = packData[i];
             // skip psolve
-            if (workStation.includes('POPS' || workStation.includes('pops'))) {
+            if (workStation.includes('POPS') || workStation.includes('pops') || workStation.includes('Psolve') || packMode.includes('pslip') || packMode.includes('pops')) {
                 continue;
             }
             if (processPath.includes('MCF')) {
@@ -321,10 +327,10 @@ function loadScript(data) {
                 packHeadcounts.singles++;
             }
             if (processPath.includes('HOV')) {
-                if (packMode === 'singles') {
+                if (packMode === 'singles' && !workStation.includes('BOD')) {
                     packHeadcounts.singles++;
                     continue;
-                } else if (packMode.includes('singles_slam') && workStation.includes('BOD')) {
+                } else if (workStation.includes('BOD')) {
                     packHeadcounts.bod++;
                     continue;
                 } else {
@@ -334,18 +340,24 @@ function loadScript(data) {
             }
             if (processPath.includes('Single') && !processPath.includes('BOD') && !processPath.includes('NonCon') && !processPath.includes('SIOC') && !processPath.includes('HandTape')) {
                 packHeadcounts.singles++;
+                continue;
             }
             if (processPath.includes('Multi')) {
                 packHeadcounts.multis++;
+                continue;
             }
             if (processPath.includes('NonCon')) {
                 packHeadcounts.noncon++;
+                continue;
             }
             if (processPath.includes('SIOC')) {
+                console.log(`${processPath} added to sioc`);
                 packHeadcounts.sioc++;
+                continue;
             }
             if (processPath.includes('BOD')) {
                 packHeadcounts.bod++;
+                continue;
             }
         }
     }
@@ -354,7 +366,7 @@ function loadScript(data) {
         for (let i = 0; i < packData.length; i++) {
             const { processPath, packMode, workStation } = packData[i];
             // skip psolve
-            if (workStation.includes('POPS' || workStation.includes('pops'))) {
+            if (workStation.includes('POPS') || workStation.includes('pops') || workStation.includes('Psolve') || packMode.includes('pslip') || packMode.includes('pops')) {
                 continue;
             }
             if (processPath.includes('MCF')) {
@@ -369,10 +381,10 @@ function loadScript(data) {
                 packHeadcounts.singles++;
             }
             if (processPath.includes('HOV')) {
-                if (packMode === 'singles') {
+                if (packMode === 'singles' && !workStation.includes('BOD')) {
                     packHeadcounts.singles++;
                     continue;
-                } else if (packMode.includes('singles_slam') && workStation.includes('BOD')) {
+                } else if (workStation.includes('BOD')) {
                     packHeadcounts.bod++;
                     continue;
                 } else {
@@ -403,14 +415,14 @@ function loadScript(data) {
         for (let i = 0; i < packData.length; i++) {
             const { processPath, packMode, workStation } = packData[i];
             // skip psolve
-            if (workStation.includes('POPS' || workStation.includes('pops'))) {
+            if (workStation.includes('POPS') || workStation.includes('pops') || workStation.includes('Psolve') || packMode.includes('pslip') || packMode.includes('pops')) {
                 continue;
             }
             if (processPath.includes('HOV')) {
-                if (packMode === 'singles') {
+                if (packMode === 'singles' && !workStation.includes('BOD')) {
                     packHeadcounts.singles++;
                     continue;
-                } else if (packMode.includes('singles_slam') && workStation.includes('BOD')) {
+                } else if (workStation.includes('BOD')) {
                     packHeadcounts.bod++;
                     continue;
                 } else {
@@ -441,7 +453,7 @@ function loadScript(data) {
         for (let i = 0; i < packData.length; i++) {
             const { processPath, packMode, workStation } = packData[i];
             // skip psolve
-            if (workStation.includes('POPS' || workStation.includes('pops'))) {
+            if (workStation.includes('POPS') || workStation.includes('pops') || workStation.includes('Psolve') || packMode.includes('pslip') || packMode.includes('pops')) {
                 continue;
             }
             if (processPath.includes('MCF')) {
@@ -456,10 +468,10 @@ function loadScript(data) {
                 packHeadcounts.singles++;
             }
             if (processPath.includes('HOV')) {
-                if (packMode === 'singles') {
+                if (packMode === 'singles' && !workStation.includes('BOD')) {
                     packHeadcounts.singles++;
                     continue;
-                } else if (packMode.includes('singles_slam') && workStation.includes('BOD')) {
+                } else if (workStation.includes('BOD')) {
                     packHeadcounts.bod++;
                     continue;
                 } else {
@@ -486,59 +498,11 @@ function loadScript(data) {
         }
     }
 
-    function parseDataSlc2(packData) {
-        for (let i = 0; i < packData.length; i++) {
-            const { processPath, packMode, workStation } = packData[i];
-            // skip psolve
-            if (workStation.includes('POPS' || workStation.includes('pops'))) {
-                continue;
-            }
-            if (processPath.includes('MCF')) {
-                if (packMode.includes('singles_slam')) {
-                    packHeadcounts.noncon++;
-                    continue;
-                }
-                if (workStation.includes('BOD')) {
-                    packHeadcounts.bod++;
-                    continue;
-                }
-                packHeadcounts.singles++;
-            }
-            if (processPath.includes('HOV')) {
-                if (packMode === 'singles') {
-                    packHeadcounts.singles++;
-                    continue;
-                } else if (packMode.includes('singles_slam') && workStation.includes('BOD')) {
-                    packHeadcounts.bod++;
-                    continue;
-                } else {
-                    packHeadcounts.noncon++;
-                    continue;
-                }
-            }
-            if (processPath.includes('Single') && !processPath.includes('BOD') && !processPath.includes('NonCon') && !processPath.includes('SIOC') && !processPath.includes('HandTape')) {
-                packHeadcounts.singles++;
-            }
-            if (processPath.includes('Multi')) {
-                packHeadcounts.multis++;
-            }
-            if (processPath.includes('NonCon')) {
-                packHeadcounts.handTape++;
-            }
-            if (processPath.includes('SIOC')) {
-                packHeadcounts.noncon++;
-            }
-            if (processPath.includes('BOD')) {
-                packHeadcounts.bod++;
-            }
-        }
-    }
-
     function parseDataHandTape(packData) {
         for (let i = 0; i < packData.length; i++) {
             const { processPath, packMode, workStation } = packData[i];
             // skip psolve
-            if (workStation.includes('POPS' || workStation.includes('pops'))) {
+            if (workStation.includes('POPS') || workStation.includes('pops') || workStation.includes('Psolve') || packMode.includes('pslip') || packMode.includes('pops')) {
                 continue;
             }
             if (processPath.includes('MCF')) {
@@ -554,10 +518,10 @@ function loadScript(data) {
                 continue;
             }
             if (processPath.includes('HOV')) {
-                if (packMode === 'singles') {
+                if (packMode === 'singles' && !workStation.includes('BOD')) {
                     packHeadcounts.singles++;
                     continue;
-                } else if (packMode.includes('singles_slam') && workStation.includes('BOD')) {
+                } else if (workStation.includes('BOD')) {
                     packHeadcounts.bod++;
                     continue;
                 } else {
@@ -588,6 +552,7 @@ function loadScript(data) {
         }
     }
 
+    // creates all added DOM elements and their children
     function makeDivs() {
         const parentDiv = document.getElementsByClassName('mat-tab-body-content')[0];
         const overlay = makeOverlay();
@@ -619,6 +584,9 @@ function loadScript(data) {
         masterDiv.appendChild(packDiv);
 
         parentDiv.prepend(masterDiv);
+
+        const navBar = document.getElementsByClassName('mat-tab-labels')[0];
+        
     }
 
     // helper methods
@@ -1580,12 +1548,19 @@ function loadScript(data) {
         pathRow = 0;
     }
 
+    function makeAutoRefreshButton() {
+        const div = document.createElement('div');
+        const p = document.createElement('p');
+        p.textContent = 'Auto';
+
+        return div;
+    }
+
     function makeCeRow(pp) {
         const row = document.createElement('tr');
         row.style.cssText += `
             border: 1px solid black;
         `
-        pathRow % 2 === 0 ? row.style.backgroundColor = '#f4f4f5' : 'white'; //every other row is light gray
 
         const setData = getSetData(pp);
         const { openBatchQuantityLimit, pickRateAverage, status, unitRateTarget } = setData;
@@ -1671,6 +1646,13 @@ function loadScript(data) {
         statusTd.textContent === 'Active' ? statusTd.style.backgroundColor = '#22c55e' : statusTd.style.backgroundColor = 'red';
         row.appendChild(statusTd);
 
+        // make whole row red if status is not set to active. otherwise alternate gray color
+        if (status !== 'Active') {
+            row.style.backgroundColor = 'red';
+        } else {
+            pathRow % 2 === 0 ? row.style.backgroundColor = '#f4f4f5' : 'white'; //every other row is light gray
+        }
+        
         pathRow++;
         return row;
     }
@@ -1777,7 +1759,7 @@ function loadScript(data) {
         const nonconRow = makePackTableRow('noncon', packHeadcounts.noncon);
         packTable.appendChild(nonconRow);
 
-        if (fc === 'CHA2') {
+        if (fc === 'CHA2' || fc === 'SLC2') {
             const siocRow = makePackTableRow('sioc', packHeadcounts.sioc);
             packTable.appendChild(siocRow);
         }
@@ -1797,7 +1779,7 @@ function loadScript(data) {
             packTable.appendChild(hazmatsingleRow);
         }
 
-        if (fc === 'LGB6' || fc === 'OKC2' || fc === 'SAT4' || fc === 'SCK1' || fc === 'SLC2') {
+        if (fc === 'LGB6' || fc === 'OKC2' || fc === 'SAT4' || fc === 'SCK1') {
             const handtapeRow = makePackTableRow('handtape', packHeadcounts.handTape);
             packTable.appendChild(handtapeRow);
         }
@@ -2209,13 +2191,14 @@ function loadScript(data) {
     }
 
     function saveInputs() {
+        // save each input
         const rows = Array.from(document.getElementById('pack-table').querySelectorAll('tr'));
         for (let i = 2; i < rows.length; i++) {
             const packGroup = rows[i].querySelectorAll('td')[0].textContent;
             const value = rows[i].querySelector('input').value;
             localStorage.setItem(`${fc}-${packGroup}`, value);
         }
-        
+
         // reset pack table for updated info
         const packTable = document.getElementById('pack-table');
         packTable.remove();
@@ -2230,9 +2213,7 @@ function loadScript(data) {
 }
 
 /* to dos
-make mass save input button instead of individual
 add auto refresh with last refreshed time
-
 fix display for laptop view
 handle error
 Uncaught SyntaxError: JSON.parse: unexpected character at line 1 column 1 of the JSON data
