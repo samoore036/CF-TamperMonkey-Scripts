@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      1.1.0
+// @version      1.2.3
 // @description  Display all pick settings, including hcs, and pack hcs
 // @author       mooshahe
 // @match        https://insights.prod-na.pack.aft.a2z.com/packman/recent?fc=*
@@ -118,7 +118,11 @@ function loadScript(data) {
         singles: 0,
         multis: 0,
         bod: 0,
-        slap: 0,
+        noncon: 0,
+        nonconlong: 0,
+        sioc: 0,
+        singlemcf: 0,
+        hazmatSingle: 0,
         handTape: 0
     }
 
@@ -182,8 +186,9 @@ function loadScript(data) {
         localStorage.setItem(`${fc}-vrets`, JSON.stringify(currentVretsPaths));
     }
 
-    parseData(getPackData());
 
+    loadPackData();
+    
     makeDivs();
     
     loadPickTableData();
@@ -215,27 +220,35 @@ function loadScript(data) {
         return packData;
     }
 
-    function parseData(packData) {
+    function loadPackData() {
+        // reset counts first
+        for (const packGroup in packHeadcounts) {
+            packHeadcounts[packGroup] = 0;
+        }
+        switch(fc) {
+            case 'CHA2': parseDataCha2(getPackData());
+                break;
+            case 'FTW5': parseDataFtw5(getPackData());
+                break;
+            case 'MDW6': parseDataMdw6(getPackData());
+                break;
+            case 'PHX7': parseDataPhx7(getPackData());
+                break;
+            case 'SLC2': parseDataSlc2(getPackData());
+                break;
+            case 'LGB6':
+            case 'OKC2': 
+            case 'SAT4': 
+            case 'SCK1': parseDataHandTape(getPackData());
+                break;
+            default: parseDataDefault(getPackData());
+        }
+    }
+
+    // uses pack data to add to pack table
+    // different versions depending on site as there are unique pack paths for some sites
+    function parseDataDefault(packData) {
         for (let i = 0; i < packData.length; i++) {
-            // if ((packData[i].processPath.includes('Single') || packData[i].processPath.includes('HOV')) && (packData[i].workStation.includes('wsPack') || packData[i].workStation.includes('wsGW'))) {
-            //     singles++;
-            //     continue;
-            // }
-            // if (packData[i].packMode === 'rebin') {
-            //     multis++;
-            //     continue;
-            // }
-            // if (packData[i].workStation.match('ws[0-9]+') || (packData[i].workStation.includes('BOD') && packData[i].processPath.includes('NonCon'))) {
-            //     slap++;
-            //     continue;
-            // }
-            // if (packData[i].processPath.includes('HandTape') && packData[i].workStation.includes('wsBOD')) {
-            //     handTape++;
-            //     continue;
-            // }
-            // if (packData[i].workStation.includes('wsBOD')) {
-            //     bod++;
-            // }
             const { processPath, packMode, workStation } = packData[i];
             // skip psolve
             if (workStation.includes('POPS' || workStation.includes('pops'))) {
@@ -243,7 +256,62 @@ function loadScript(data) {
             }
             if (processPath.includes('MCF')) {
                 if (packMode.includes('singles_slam')) {
-                    packHeadcounts.slap++;
+                    packHeadcounts.noncon++;
+                    continue;
+                }
+                if (workStation.includes('BOD')) {
+                    packHeadcounts.bod++;
+                    continue;
+                }
+                if (packMode.includes('rebin')) {
+                    packHeadcounts.multis++;
+                    continue;
+                }
+                packHeadcounts.singles++;
+                continue;
+            }
+            if (processPath.includes('HOV')) {
+                if (packMode === 'singles') {
+                    packHeadcounts.singles++;
+                    continue;
+                } else if (packMode.includes('singles_slam') && workStation.includes('BOD')) {
+                    packHeadcounts.bod++;
+                    continue;
+                } else {
+                    packHeadcounts.noncon++;
+                    continue;
+                }
+            }
+            if (processPath.includes('Single') && !processPath.includes('BOD') && !processPath.includes('NonCon') && !processPath.includes('SIOC') && !processPath.includes('HandTape')) {
+                packHeadcounts.singles++;
+                continue;
+            }
+            if (processPath.includes('Multi')) {
+                console.log(`${processPath} counted as multis`);
+                packHeadcounts.multis++;
+                continue;
+            }
+            if (processPath.includes('NonCon') || processPath.includes('SIOC')) {
+                packHeadcounts.noncon++;
+                continue;
+            }
+            if (processPath.includes('BOD')) {
+                packHeadcounts.bod++;
+                continue;
+            }
+        }
+    }
+
+    function parseDataCha2(packData) {
+        for (let i = 0; i < packData.length; i++) {
+            const { processPath, packMode, workStation } = packData[i];
+            // skip psolve
+            if (workStation.includes('POPS' || workStation.includes('pops'))) {
+                continue;
+            }
+            if (processPath.includes('MCF')) {
+                if (packMode.includes('singles_slam')) {
+                    packHeadcounts.noncon++;
                     continue;
                 }
                 if (workStation.includes('BOD')) {
@@ -252,6 +320,18 @@ function loadScript(data) {
                 }
                 packHeadcounts.singles++;
             }
+            if (processPath.includes('HOV')) {
+                if (packMode === 'singles') {
+                    packHeadcounts.singles++;
+                    continue;
+                } else if (packMode.includes('singles_slam') && workStation.includes('BOD')) {
+                    packHeadcounts.bod++;
+                    continue;
+                } else {
+                    packHeadcounts.noncon++;
+                    continue;
+                }
+            }
             if (processPath.includes('Single') && !processPath.includes('BOD') && !processPath.includes('NonCon') && !processPath.includes('SIOC') && !processPath.includes('HandTape')) {
                 packHeadcounts.singles++;
             }
@@ -259,22 +339,251 @@ function loadScript(data) {
                 packHeadcounts.multis++;
             }
             if (processPath.includes('NonCon')) {
-                packHeadcounts.slap++;
+                packHeadcounts.noncon++;
             }
-            if (processPath.includes('HandTape')) {
-                packHeadcounts.handTape++;
+            if (processPath.includes('SIOC')) {
+                packHeadcounts.sioc++;
             }
             if (processPath.includes('BOD')) {
                 packHeadcounts.bod++;
             }
+        }
+    }
+
+    function parseDataFtw5(packData) {
+        for (let i = 0; i < packData.length; i++) {
+            const { processPath, packMode, workStation } = packData[i];
+            // skip psolve
+            if (workStation.includes('POPS' || workStation.includes('pops'))) {
+                continue;
+            }
+            if (processPath.includes('MCF')) {
+                if (packMode.includes('singles_slam')) {
+                    packHeadcounts.noncon++;
+                    continue;
+                }
+                if (workStation.includes('BOD')) {
+                    packHeadcounts.bod++;
+                    continue;
+                }
+                packHeadcounts.singles++;
+            }
             if (processPath.includes('HOV')) {
-                if (packMode.includes('singles')) {
+                if (packMode === 'singles') {
                     packHeadcounts.singles++;
+                    continue;
                 } else if (packMode.includes('singles_slam') && workStation.includes('BOD')) {
                     packHeadcounts.bod++;
+                    continue;
                 } else {
-                    packHeadcounts.slap++;
+                    packHeadcounts.noncon++;
+                    continue;
                 }
+            }
+            if (processPath.includes('Single') && !processPath.includes('BOD') && !processPath.includes('NonCon') && !processPath.includes('SIOC') && !processPath.includes('HandTape')) {
+                packHeadcounts.singles++;
+            }
+            if (processPath.includes('Multi')) {
+                packHeadcounts.multis++;
+            }
+            if (processPath.includes('NonConLong')) {
+                packHeadcounts.nonconlong++;
+                continue;
+            }
+            if (processPath.includes('NonCon') || processPath.includes('SIOC')) {
+                packHeadcounts.noncon++;
+            }
+            if (processPath.includes('BOD')) {
+                packHeadcounts.bod++;
+            }
+        }
+    }
+
+    function parseDataMdw6(packData) {
+        for (let i = 0; i < packData.length; i++) {
+            const { processPath, packMode, workStation } = packData[i];
+            // skip psolve
+            if (workStation.includes('POPS' || workStation.includes('pops'))) {
+                continue;
+            }
+            if (processPath.includes('HOV')) {
+                if (packMode === 'singles') {
+                    packHeadcounts.singles++;
+                    continue;
+                } else if (packMode.includes('singles_slam') && workStation.includes('BOD')) {
+                    packHeadcounts.bod++;
+                    continue;
+                } else {
+                    packHeadcounts.noncon++;
+                    continue;
+                }
+            }
+            if (processPath.includes('SingleMCF')) {
+                packHeadcounts.singlemcf++;
+                continue;
+            }
+            if (processPath.includes('Single') && !processPath.includes('BOD') && !processPath.includes('NonCon') && !processPath.includes('SIOC') && !processPath.includes('HandTape')) {
+                packHeadcounts.singles++;
+            }
+            if (processPath.includes('Multi')) {
+                packHeadcounts.multis++;
+            }
+            if (processPath.includes('NonCon') || processPath.includes('SIOC')) {
+                packHeadcounts.noncon++;
+            }
+            if (processPath.includes('BOD')) {
+                packHeadcounts.bod++;
+            }
+        }
+    }
+
+    function parseDataPhx7(packData) {
+        for (let i = 0; i < packData.length; i++) {
+            const { processPath, packMode, workStation } = packData[i];
+            // skip psolve
+            if (workStation.includes('POPS' || workStation.includes('pops'))) {
+                continue;
+            }
+            if (processPath.includes('MCF')) {
+                if (packMode.includes('singles_slam')) {
+                    packHeadcounts.noncon++;
+                    continue;
+                }
+                if (workStation.includes('BOD')) {
+                    packHeadcounts.bod++;
+                    continue;
+                }
+                packHeadcounts.singles++;
+            }
+            if (processPath.includes('HOV')) {
+                if (packMode === 'singles') {
+                    packHeadcounts.singles++;
+                    continue;
+                } else if (packMode.includes('singles_slam') && workStation.includes('BOD')) {
+                    packHeadcounts.bod++;
+                    continue;
+                } else {
+                    packHeadcounts.noncon++;
+                    continue;
+                }
+            }
+            if (processPath.includes('Single') && processPath.includes('DG')) {
+                packHeadcounts.hazmatSingle++;
+                continue;
+            }
+            if (processPath.includes('Single') && !processPath.includes('BOD') && !processPath.includes('NonCon') && !processPath.includes('SIOC') && !processPath.includes('HandTape')) {
+                packHeadcounts.singles++;
+            }
+            if (processPath.includes('Multi')) {
+                packHeadcounts.multis++;
+            }
+            if (processPath.includes('NonCon') || processPath.includes('SIOC')) {
+                packHeadcounts.noncon++;
+            }
+            if (processPath.includes('BOD')) {
+                packHeadcounts.bod++;
+            }
+        }
+    }
+
+    function parseDataSlc2(packData) {
+        for (let i = 0; i < packData.length; i++) {
+            const { processPath, packMode, workStation } = packData[i];
+            // skip psolve
+            if (workStation.includes('POPS' || workStation.includes('pops'))) {
+                continue;
+            }
+            if (processPath.includes('MCF')) {
+                if (packMode.includes('singles_slam')) {
+                    packHeadcounts.noncon++;
+                    continue;
+                }
+                if (workStation.includes('BOD')) {
+                    packHeadcounts.bod++;
+                    continue;
+                }
+                packHeadcounts.singles++;
+            }
+            if (processPath.includes('HOV')) {
+                if (packMode === 'singles') {
+                    packHeadcounts.singles++;
+                    continue;
+                } else if (packMode.includes('singles_slam') && workStation.includes('BOD')) {
+                    packHeadcounts.bod++;
+                    continue;
+                } else {
+                    packHeadcounts.noncon++;
+                    continue;
+                }
+            }
+            if (processPath.includes('Single') && !processPath.includes('BOD') && !processPath.includes('NonCon') && !processPath.includes('SIOC') && !processPath.includes('HandTape')) {
+                packHeadcounts.singles++;
+            }
+            if (processPath.includes('Multi')) {
+                packHeadcounts.multis++;
+            }
+            if (processPath.includes('NonCon')) {
+                packHeadcounts.handTape++;
+            }
+            if (processPath.includes('SIOC')) {
+                packHeadcounts.noncon++;
+            }
+            if (processPath.includes('BOD')) {
+                packHeadcounts.bod++;
+            }
+        }
+    }
+
+    function parseDataHandTape(packData) {
+        for (let i = 0; i < packData.length; i++) {
+            const { processPath, packMode, workStation } = packData[i];
+            // skip psolve
+            if (workStation.includes('POPS' || workStation.includes('pops'))) {
+                continue;
+            }
+            if (processPath.includes('MCF')) {
+                if (packMode.includes('singles_slam')) {
+                    packHeadcounts.noncon++;
+                    continue;
+                }
+                if (workStation.includes('BOD')) {
+                    packHeadcounts.bod++;
+                    continue;
+                }
+                packHeadcounts.singles++;
+                continue;
+            }
+            if (processPath.includes('HOV')) {
+                if (packMode === 'singles') {
+                    packHeadcounts.singles++;
+                    continue;
+                } else if (packMode.includes('singles_slam') && workStation.includes('BOD')) {
+                    packHeadcounts.bod++;
+                    continue;
+                } else {
+                    packHeadcounts.noncon++;
+                    continue;
+                }
+            }
+            if (processPath.includes('Single') && !processPath.includes('BOD') && !processPath.includes('NonCon') && !processPath.includes('SIOC') && !processPath.includes('HandTape')) {
+                packHeadcounts.singles++;
+                continue;
+            }
+            if (processPath.includes('Multi')) {
+                packHeadcounts.multis++;
+                continue;
+            }
+            if (processPath.includes('SIOC') || processPath.includes('NonCon')) {
+                packHeadcounts.noncon++;
+                continue;
+            }
+            if (processPath.includes('BOD')) {
+                packHeadcounts.bod++;
+                continue;
+            }
+            if (processPath.includes('HandTape')) {
+                packHeadcounts.handTape++;
+                continue;
             }
         }
     }
@@ -302,8 +611,11 @@ function loadScript(data) {
         masterDiv.appendChild(pickDiv);
 
         const packDiv = makePackDiv();
+        packDiv.setAttribute('id', 'pack-div');
         const packTable = makePackTable();
         packDiv.appendChild(packTable);
+        const saveButton = makeInputSaveButton();
+        packDiv.appendChild(saveButton);
         masterDiv.appendChild(packDiv);
 
         parentDiv.prepend(masterDiv);
@@ -1178,15 +1490,14 @@ function loadScript(data) {
     function makePackTable() {
         // get heights of pick table div elements to make pick and pack tables even in height
         const settingsBtnHeight = document.getElementById('settings-btn').offsetHeight;
-        const activePickersDivHeight = document.getElementById('active-div').offsetHeight;
         const packTable = document.createElement('table');
         packTable.setAttribute('id', 'pack-table');
+        console.log(settingsBtnHeight);
         packTable.style.cssText += `
-            margin-top: ${settingsBtnHeight + activePickersDivHeight + 100}px;
+            margin-top: ${settingsBtnHeight + 170}px;
             text-align: center;
             border-collapse: collapse;
         `
-        packTable.style.marginTop = `${settingsBtnHeight + activePickersDivHeight}`;
         const titleRow = document.createElement('tr');
         titleRow.style.cssText += `
             font-size: 1.2rem;
@@ -1226,6 +1537,20 @@ function loadScript(data) {
         packTable.appendChild(categoriesRow);
 
         return packTable;
+    }
+
+    function makeInputSaveButton() {
+        const button = document.createElement('button');
+        button.setAttribute('id', 'input-save-btn');
+        button.style.cssText += `
+            font-size: 1.1rem;
+            width: 100%;
+        `
+        button.textContent = 'Save inputs';
+
+        button.addEventListener('click', saveInputs);
+
+        return button;
     }
 
     function loadPickTableData() {
@@ -1440,12 +1765,41 @@ function loadScript(data) {
 
     function loadPackTableData() {
         const packTable = document.getElementById('pack-table');
-        for (const [key, value] of Object.entries(packHeadcounts)) {
-            if (!value || value === 0) {
-                continue;
-            }
-            const tr = makePackTableRow(key, value);
-            packTable.appendChild(tr);
+        const singlesRow = makePackTableRow('singles', packHeadcounts.singles);
+        packTable.appendChild(singlesRow);
+
+        const multisRow = makePackTableRow('multis', packHeadcounts.multis);
+        packTable.appendChild(multisRow);
+
+        const bodRow = makePackTableRow('bod', packHeadcounts.bod);
+        packTable.appendChild(bodRow);
+
+        const nonconRow = makePackTableRow('noncon', packHeadcounts.noncon);
+        packTable.appendChild(nonconRow);
+
+        if (fc === 'CHA2') {
+            const siocRow = makePackTableRow('sioc', packHeadcounts.sioc);
+            packTable.appendChild(siocRow);
+        }
+
+        if (fc === 'FTW5') {
+            const nonconlongRow = makePackTableRow('nonconlong', packHeadcounts.nonconlong);
+            packTable.appendChild(nonconlongRow);
+        }
+
+        if (fc === 'MDW6') {
+            const singlemcfRow = makePackTableRow('single mcf', packHeadcounts.singlemcf);
+            packTable.appendChild(singlemcfRow);
+        }
+
+        if (fc === 'PHX7') {
+            const hazmatsingleRow = makePackTableRow('hazmat single', packHeadcounts.hazmatSingle);
+            packTable.appendChild(hazmatsingleRow);
+        }
+
+        if (fc === 'LGB6' || fc === 'OKC2' || fc === 'SAT4' || fc === 'SCK1' || fc === 'SLC2') {
+            const handtapeRow = makePackTableRow('handtape', packHeadcounts.handTape);
+            packTable.appendChild(handtapeRow);
         }
     }
 
@@ -1551,6 +1905,7 @@ function loadScript(data) {
             border: 1px solid black;
         `
         const input = document.createElement('input');
+        input.setAttribute('id', `${packGroup}-input`);
         input.style.cssText += `
             height: 2rem;
             font-size: 1rem;
@@ -1565,11 +1920,8 @@ function loadScript(data) {
             input.style.backgroundColor = 'yellow';
         }
 
-        input.addEventListener('change', (e) => {
-            localStorage.setItem(`${fc}-${packGroup}`, e.target.value);
-        })
         td.appendChild(input);
-
+    
         return td;
     }
 
@@ -1856,16 +2208,32 @@ function loadScript(data) {
         updateCurrentLists();
     }
 
+    function saveInputs() {
+        const rows = Array.from(document.getElementById('pack-table').querySelectorAll('tr'));
+        for (let i = 2; i < rows.length; i++) {
+            const packGroup = rows[i].querySelectorAll('td')[0].textContent;
+            const value = rows[i].querySelector('input').value;
+            localStorage.setItem(`${fc}-${packGroup}`, value);
+        }
+        
+        // reset pack table for updated info
+        const packTable = document.getElementById('pack-table');
+        packTable.remove();
+
+        const packDiv = document.getElementById('pack-div');
+        const newPackTable = makePackTable();
+        newPackTable.setAttribute('id', 'pack-table');
+        packDiv.prepend(newPackTable);
+        loadPackData();
+        loadPackTableData();
+    }
 }
 
 /* to dos
-
-add pack total hcs vs plan
-when user inputs pack hcs, prompt a saved text
-go through sites, find the unique pack paths and only enable for those sites
-add flags if noncon processed in BOD or vice versa
+make mass save input button instead of individual
 add auto refresh with last refreshed time
-reload pack table whenever inputs change
+
+fix display for laptop view
 handle error
 Uncaught SyntaxError: JSON.parse: unexpected character at line 1 column 1 of the JSON data
 
