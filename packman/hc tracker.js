@@ -114,6 +114,10 @@ function loadScript(data) {
         localStorage.setItem(`${fc}-vrets`, JSON.stringify([]));
     }
 
+    if (localStorage.getItem('auto-refresh') === null) {
+        localStorage.setItem('auto-refresh', 'true');
+    }
+
     const packHeadcounts = {
         singles: 0,
         multis: 0,
@@ -237,7 +241,6 @@ function loadScript(data) {
             case 'MDW6': parseDataMdw6(getPackData());
                 break;
             case 'PHX7': parseDataPhx7(getPackData());
-                break;
                 break;
             case 'LGB6':
             case 'OKC2': 
@@ -594,11 +597,13 @@ function loadScript(data) {
             margin-left: 2rem;
             font-size: 14px;
             display: flex;
-            gap: 2rem;
+            gap: 2.5rem;
             align-items: center;
+            color: rgba(118, 114, 114, 0.87);
         `
-        addedNavBarDiv.appendChild(makeAutoRefreshButton());
+
         addedNavBarDiv.appendChild(makeOpenSettingsButton());
+        addedNavBarDiv.appendChild(makeAutoRefreshButton());
         navBar.appendChild(addedNavBarDiv);
     }
 
@@ -908,9 +913,10 @@ function loadScript(data) {
         div.style.cssText += `
             font-size: 14px;
             font-family: sans-serif;
-            background-color: #f2f2bd;
-            padding: 1rem;
-            border: 1px solid black;
+            text-decoration-line: underline;
+            text-decoration-thickness: 3px;
+            text-decoration-color: #e5d1ba;
+            text-decoration-skip-ink: none;
             cursor: pointer;
         `
         div.textContent = 'Process Path Settings';
@@ -1550,6 +1556,7 @@ function loadScript(data) {
 
     function makeAutoRefreshButton() {
         const div = document.createElement('div');
+        div.setAttribute('id', 'auto-refresh-div');
         div.style.cssText += `  
             display: flex;
             align-items: center;
@@ -1560,9 +1567,11 @@ function loadScript(data) {
         div.appendChild(p);
 
         const toggleButton = document.createElement('button');
+        toggleButton.addEventListener('click', togglingAutoRefresh);
         toggleButton.style.cssText += `
             height: 1rem;
             width: 1rem;
+            background-color: ${localStorage.getItem('auto-refresh') === 'true' ? '#6fd66f' : 'rgb(248, 113, 113)'};
             border: none;
             border-radius: 1rem;
             cursor: pointer;
@@ -2225,6 +2234,22 @@ function loadScript(data) {
         packDiv.prepend(newPackTable);
         loadPackData();
         loadPackTableData();
+    }
+
+    function togglingAutoRefresh() {
+        const value = localStorage.getItem('auto-refresh');
+        if (value === 'true') {
+            localStorage.setItem('auto-refresh', 'false');
+        } else {
+            localStorage.setItem('auto-refresh', 'true');
+        }
+        
+        // update ui
+        const parent = document.getElementById('added-navbar-div');
+        const autorefreshDiv = document.getElementById('auto-refresh-div');
+        autorefreshDiv.remove();
+        
+        parent.appendChild(makeAutoRefreshButton());
     }
 }
 
