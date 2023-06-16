@@ -554,6 +554,7 @@ function loadScript(data) {
 
     // creates all added DOM elements and their children
     function makeDivs() {
+        console.log('making divs');
         const parentDiv = document.getElementsByClassName('mat-tab-body-content')[0];
         const overlay = makeOverlay();
         overlay.appendChild(makeSettingsDiv());
@@ -585,8 +586,20 @@ function loadScript(data) {
 
         parentDiv.prepend(masterDiv);
 
+        // add pick settings button and auto refresh to navbar
         const navBar = document.getElementsByClassName('mat-tab-labels')[0];
-        
+        const addedNavBarDiv = document.createElement('div');
+        addedNavBarDiv.setAttribute('id', 'added-navbar-div');
+        addedNavBarDiv.style.cssText += `
+            margin-left: 2rem;
+            font-size: 14px;
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        `
+        addedNavBarDiv.appendChild(makeAutoRefreshButton());
+        addedNavBarDiv.appendChild(makeOpenSettingsButton());
+        navBar.appendChild(addedNavBarDiv);
     }
 
     // helper methods
@@ -890,23 +903,20 @@ function loadScript(data) {
     }
 
     function makeOpenSettingsButton() {
-        const button = document.createElement('button');
-        button.setAttribute('id', 'settings-btn');
-        button.style.cssText += `
-            height: 3rem;
-            width: 7rem;
-            border: 2px solid darkblue;
-            background-color: #FDE68A;
-            font-size: 1.1rem;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
+        const div = document.createElement('div');
+        div.setAttribute('id', 'settings-btn');
+        div.style.cssText += `
+            font-size: 14px;
+            font-family: sans-serif;
+            background-color: #f2f2bd;
+            padding: 1rem;
+            border: 1px solid black;
+            cursor: pointer;
         `
-        button.textContent = 'Process Path Settings';
-        button.style.cursor = 'pointer';
-        button.addEventListener('click', openSettings);
+        div.textContent = 'Process Path Settings';
+        div.addEventListener('click', openSettings);
         
-        return button;
+        return div;
     }
 
     function makeCloseSettingsBtn() {
@@ -939,14 +949,6 @@ function loadScript(data) {
 
     function makePickDiv() {
         const pickDiv = document.createElement('div');
-        const settingsDiv = document.createElement('div');
-        settingsDiv.setAttribute('id', 'settings-btn-div');
-        settingsDiv.style.cssText += `
-            display: flex;
-            justify-content: end;
-        `
-        settingsDiv.appendChild(makeOpenSettingsButton());
-        pickDiv.appendChild(settingsDiv);
 
         const ceTableDiv = document.createElement('div');
         ceTableDiv.setAttribute('id', 'ce-table-div');
@@ -1457,12 +1459,10 @@ function loadScript(data) {
 
     function makePackTable() {
         // get heights of pick table div elements to make pick and pack tables even in height
-        const settingsBtnHeight = document.getElementById('settings-btn').offsetHeight;
         const packTable = document.createElement('table');
         packTable.setAttribute('id', 'pack-table');
-        console.log(settingsBtnHeight);
         packTable.style.cssText += `
-            margin-top: ${settingsBtnHeight + 170}px;
+            margin-top: 170px;
             text-align: center;
             border-collapse: collapse;
         `
@@ -1550,8 +1550,24 @@ function loadScript(data) {
 
     function makeAutoRefreshButton() {
         const div = document.createElement('div');
+        div.style.cssText += `  
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        `
         const p = document.createElement('p');
-        p.textContent = 'Auto';
+        p.textContent = 'Auto Refresh';
+        div.appendChild(p);
+
+        const toggleButton = document.createElement('button');
+        toggleButton.style.cssText += `
+            height: 1rem;
+            width: 1rem;
+            border: none;
+            border-radius: 1rem;
+            cursor: pointer;
+        `
+        div.appendChild(toggleButton);
 
         return div;
     }
