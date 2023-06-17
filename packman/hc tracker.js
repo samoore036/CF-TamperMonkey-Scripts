@@ -96,6 +96,9 @@ function loadScript(data) {
     let activeSinglesTotal = 0;
     let setSinglesTotal = 0;
 
+    // used for timestamp of last refresh
+    const date = new Date();
+
     /*---------------------------/
     -local storage functionality-
     /--------------------------*/
@@ -121,14 +124,17 @@ function loadScript(data) {
     /*------------------/
     -auto refresh logic-
     /------------------*/
-    const startRefreshInterval = () => {
-        setTimeout(() => {
+    let interval;
+    function startRefreshInterval() {
+        console.log('starting interval');
+        interval = setTimeout(() => {
             location.reload();
-        }, 70000);
+        }, 10000);
     }
 
     function clearInterval() {
-        clearTimeout(startRefreshInterval);
+        console.log('clearing interval');
+        clearTimeout(interval);
     }
 
     // start the auto-refresh if it is enabled
@@ -1592,7 +1598,6 @@ function loadScript(data) {
 
         const timeDiv = document.createElement('div');
         timeDiv.style.fontSize = '10px';
-        const date = new Date();
         timeDiv.textContent = `${date.getHours() < 10 ? '0' + date.getHours() : date.getHours()}:${date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes()}:${date.getSeconds() < 10 ? '0' + date.getSeconds() : date.getSeconds()}`;
         div.appendChild(timeDiv);
 
