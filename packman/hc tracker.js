@@ -118,6 +118,24 @@ function loadScript(data) {
         localStorage.setItem('auto-refresh', 'true');
     }
 
+    /*------------------/
+    -auto refresh logic-
+    /------------------*/
+    const startRefreshInterval = () => {
+        setTimeout(() => {
+            location.reload();
+        }, 70000);
+    }
+
+    function clearInterval() {
+        clearTimeout(startRefreshInterval);
+    }
+
+    // start the auto-refresh if it is enabled
+    if (localStorage.getItem('auto-refresh') === 'true') {
+        startRefreshInterval();
+    }
+
     const packHeadcounts = {
         singles: 0,
         multis: 0,
@@ -229,7 +247,6 @@ function loadScript(data) {
         // reset counts first
         for (const packGroup in packHeadcounts) {
             packHeadcounts[packGroup] = 0;
-            console.log(packHeadcounts[packGroup]);
         }
 
         switch(fc) {
@@ -273,7 +290,6 @@ function loadScript(data) {
                     packHeadcounts.multis++;
                     continue;
                 }
-                console.log(`${processPath} added to singles mcf`);
                 packHeadcounts.singles++;
                 continue;
             }
@@ -290,17 +306,14 @@ function loadScript(data) {
                 }
             }
             if (processPath.includes('Single') && !processPath.includes('BOD') && !processPath.includes('NonCon') && !processPath.includes('SIOC') && !processPath.includes('HandTape')) {
-                console.log(`${processPath} added to singles`);
                 packHeadcounts.singles++;
                 continue;
             }
             if (processPath.includes('Multi')) {
-                console.log(`${processPath} counted as multis`);
                 packHeadcounts.multis++;
                 continue;
             }
             if (processPath.includes('NonCon') || processPath.includes('SIOC')) {
-                console.log(`${processPath} added to noncon`);
                 packHeadcounts.noncon++;
                 continue;
             }
@@ -354,7 +367,6 @@ function loadScript(data) {
                 continue;
             }
             if (processPath.includes('SIOC')) {
-                console.log(`${processPath} added to sioc`);
                 packHeadcounts.sioc++;
                 continue;
             }
@@ -557,7 +569,6 @@ function loadScript(data) {
 
     // creates all added DOM elements and their children
     function makeDivs() {
-        console.log('making divs');
         const parentDiv = document.getElementsByClassName('mat-tab-body-content')[0];
         const overlay = makeOverlay();
         overlay.appendChild(makeSettingsDiv());
@@ -1578,6 +1589,12 @@ function loadScript(data) {
         `
         div.appendChild(toggleButton);
 
+        const timeDiv = document.createElement('div');
+        timeDiv.style.fontSize = '10px';
+        const date = new Date();
+        timeDiv.textContent = `${date.getHours() < 10 ? '0' + date.getHours() : date.getHours()}:${date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes()}:${date.getSeconds() < 10 ? '0' + date.getSeconds() : date.getSeconds()}`;
+        div.appendChild(timeDiv);
+
         return div;
     }
 
@@ -2187,7 +2204,6 @@ function loadScript(data) {
 
     // remove old DOM elements and insert updated ones. React would be nice to have here
     function updateCurrentLists() {
-        console.log('updating current lists and resetting dom');
         // reset the selected arrays
         freeSelectedPaths.length =0;
         ceSelectedPaths.length = 0;
@@ -2240,8 +2256,10 @@ function loadScript(data) {
         const value = localStorage.getItem('auto-refresh');
         if (value === 'true') {
             localStorage.setItem('auto-refresh', 'false');
+            clearInterval();
         } else {
             localStorage.setItem('auto-refresh', 'true');
+            startRefreshInterval();
         }
         
         // update ui
