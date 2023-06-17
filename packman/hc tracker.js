@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      1.2.3
+// @version      1.3.0
 // @description  Display all pick settings, including hcs, and pack hcs
 // @author       mooshahe
 // @match        https://insights.prod-na.pack.aft.a2z.com/packman/recent?fc=*
@@ -579,6 +579,7 @@ function loadScript(data) {
         masterDiv.style.cssText += `
             padding: 1rem;
             display: flex;
+            justify-content: center;
             gap: 2vw;
             font-size: 1.4rem;
             line-height: 2rem;
@@ -1867,8 +1868,8 @@ function loadScript(data) {
         td.textContent = data;
         td.style.cssText += `
             border: 1px solid black;
-            padding: 1px 5px;
-            font-size: 1rem;
+            padding: 1px 0px;
+            font-size: 15px;
         `
 
         return td;
@@ -1878,8 +1879,8 @@ function loadScript(data) {
         const td = document.createElement('td');
         td.style.cssText += `
             border: 1px solid black;
-            padding-left: 0.4rem;
-            padding-right: 2rem;
+            padding-left: 0.3rem;
+            padding-right: 0.5rem;
         `
 
         const a = document.createElement('a');
@@ -1889,7 +1890,7 @@ function loadScript(data) {
             color: black;
             cursor: pointer;
             border: medium none;
-            font-size: 1rem;
+            font-size: 14px;
         `
 
         a.onmouseover = () => a.style.cssText += `
@@ -1911,9 +1912,10 @@ function loadScript(data) {
         const td = document.createElement('td');
         td.textContent = str;
         td.style.cssText += `
-            padding: 0 1rem;
-            font-size: 1rem;
+            padding: 0 0.5rem;
+            font-size: 15px;
             font-weight: bold;
+            line-height: 20px;
         `
 
         return td;
@@ -1932,7 +1934,7 @@ function loadScript(data) {
         input.setAttribute('id', `${packGroup}-input`);
         input.style.cssText += `
             height: 2rem;
-            font-size: 1rem;
+            font-size: 14px;
             width: 4rem;
             text-align: center;
             border: 1px solid;
@@ -2272,8 +2274,7 @@ function loadScript(data) {
 }
 
 /* to dos
-add auto refresh with last refreshed time
-fix display for laptop view
+
 handle error
 Uncaught SyntaxError: JSON.parse: unexpected character at line 1 column 1 of the JSON data
 
