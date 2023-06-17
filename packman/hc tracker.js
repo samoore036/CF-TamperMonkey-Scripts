@@ -1,7 +1,6 @@
 // ==UserScript==
-// @name         HC Tracker
-// @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
-// @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
+// @name         Packman HC Tracker
+// @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/packman/hc%20tracker.js
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
 // @version      2.0
 // @description  Display all pick settings, including hcs, and pack hcs
