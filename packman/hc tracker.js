@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/dwell-callouts/cpt-dwells.js
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      1.3.0
+// @version      2.0
 // @description  Display all pick settings, including hcs, and pack hcs
 // @author       mooshahe
 // @match        https://insights.prod-na.pack.aft.a2z.com/packman/recent?fc=*
@@ -62,10 +62,34 @@ const batchData = new Promise(function(resolve) {
 Promise.all([activeData, setData, batchData]).then((data) => {
     setTimeout(() => {
         loadScript(data);
-    }, 4000);
+    }, 3000);
 })
 
 function loadScript(data) {
+
+    /*------------------/
+    -auto refresh logic-
+    /------------------*/
+    if (localStorage.getItem('auto-refresh') === null) {
+        localStorage.setItem('auto-refresh', 'true');
+    }
+
+    let interval;
+    function startRefreshInterval() {
+        interval = setTimeout(() => {
+            location.reload();
+        }, 70000);
+    }
+
+    function clearInterval() {
+        clearTimeout(interval);
+    }
+
+    // start the auto-refresh if it is enabled
+    if (localStorage.getItem('auto-refresh') === 'true') {
+        startRefreshInterval();
+    }
+
     const activeData = JSON.parse(data[0]).processPathInformationMap;
     const setData = JSON.parse(data[1]).processPaths; //gives an array of all process paths with set settings
     let batchData = {};
@@ -115,31 +139,6 @@ function loadScript(data) {
     }
     if (localStorage.getItem(`${fc}-vrets`) === null) {
         localStorage.setItem(`${fc}-vrets`, JSON.stringify([]));
-    }
-
-    if (localStorage.getItem('auto-refresh') === null) {
-        localStorage.setItem('auto-refresh', 'true');
-    }
-
-    /*------------------/
-    -auto refresh logic-
-    /------------------*/
-    let interval;
-    function startRefreshInterval() {
-        console.log('starting interval');
-        interval = setTimeout(() => {
-            location.reload();
-        }, 10000);
-    }
-
-    function clearInterval() {
-        console.log('clearing interval');
-        clearTimeout(interval);
-    }
-
-    // start the auto-refresh if it is enabled
-    if (localStorage.getItem('auto-refresh') === 'true') {
-        startRefreshInterval();
     }
 
     const packHeadcounts = {
@@ -668,7 +667,7 @@ function loadScript(data) {
             display: flex;
             border-radius: 20px;
             font-family: sans-serif;
-            font-size: 15px;
+            font-size: 14px;
         `
 
         const currentPathsDiv = document.createElement('div');
@@ -1082,7 +1081,6 @@ function loadScript(data) {
         `
 
         const titleHeader = document.createElement('th');
-        titleHeader.classList.add('table-header');
         titleHeader.textContent = 'CE Paths';
         titleHeader.colSpan = '11';
         titleRow.appendChild(titleHeader);
@@ -1499,7 +1497,6 @@ function loadScript(data) {
             border-bottom: none;
         `
         const titleHeader = document.createElement('th');
-        titleHeader.classList.add('table-header');
         titleHeader.textContent = `Pack hcs in the last 15 minutes`;
         titleHeader.colSpan = '5';
         titleRow.appendChild(titleHeader);
@@ -1710,7 +1707,6 @@ function loadScript(data) {
         row.style.cssText += `
             border: 1px solid black;
         `
-        pathRow % 2 === 0 ? row.style.backgroundColor = '#f4f4f5' : 'white'; //every other row is light gray
 
         const setData = getSetData(pp);
         const { openBatchQuantityLimit, pickRateAverage, status, unitRateTarget } = setData;
@@ -1770,6 +1766,14 @@ function loadScript(data) {
         statusTd.textContent === 'Active' ? statusTd.style.backgroundColor = '#22c55e' : statusTd.style.backgroundColor = 'red';
         row.appendChild(statusTd);
 
+        // make whole row red if status is not set to active. otherwise alternate gray color
+        if (status !== 'Active') {
+            row.style.backgroundColor = 'red';
+        } else {
+            pathRow % 2 === 0 ? row.style.backgroundColor = '#f4f4f5' : 'white'; //every other row is light gray
+        }
+
+        pathRow++;
         return row;
     }
 
@@ -1874,7 +1878,7 @@ function loadScript(data) {
         td.style.cssText += `
             border: 1px solid black;
             padding: 1px 0px;
-            font-size: 15px;
+            font-size: 14px;
         `
 
         return td;
@@ -1918,7 +1922,7 @@ function loadScript(data) {
         td.textContent = str;
         td.style.cssText += `
             padding: 0 0.5rem;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: bold;
             line-height: 20px;
         `
@@ -2277,10 +2281,3 @@ function loadScript(data) {
         parent.appendChild(makeAutoRefreshButton());
     }
 }
-
-/* to dos
-
-handle error
-Uncaught SyntaxError: JSON.parse: unexpected character at line 1 column 1 of the JSON data
-
-*/
