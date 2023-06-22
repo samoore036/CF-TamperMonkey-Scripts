@@ -77,7 +77,7 @@ function loadScript(data) {
     function startRefreshInterval() {
         interval = setTimeout(() => {
             location.reload();
-        }, 70000);
+        }, 10000);
     }
 
     function clearInterval() {
@@ -607,23 +607,8 @@ function loadScript(data) {
 
         // add pick settings button and auto refresh to navbar
         const navBar = document.getElementsByClassName('mat-tab-labels')[0];
-        const addedNavBarDiv = document.createElement('div');
-        addedNavBarDiv.setAttribute('id', 'added-navbar-div');
-        addedNavBarDiv.style.cssText += `
-            margin-left: 1rem;
-            padding-left: 10px;
-            font-size: 14px;
-            display: flex;
-            gap: 2.5rem;
-            align-items: center;
-            color: rgba(118, 114, 114, 0.87);
-            border-left: 3px solid orange;
-            border-bottom: 3px solid orange;
-        `
-
-        addedNavBarDiv.appendChild(makeOpenSettingsButton());
-        addedNavBarDiv.appendChild(makeAutoRefreshButton());
-        navBar.appendChild(addedNavBarDiv);
+        navBar.appendChild(makeOpenSettingsButton());
+        navBar.appendChild(makeAutoRefreshButton());
     }
 
     // helper methods
@@ -932,9 +917,14 @@ function loadScript(data) {
         div.style.cssText += `
             font-size: 14px;
             font-family: sans-serif;
+            padding-left: 10px;
+            padding: 0.9rem;
+            border: 3px solid orange;
+            margin-left: 1rem;
+            color: rgba(118, 114, 114, 0.87);
             cursor: pointer;
         `
-        div.textContent = 'Process Path Settings';
+        div.textContent = 'Pick Path Settings';
         div.addEventListener('click', openSettings);
         
         return div;
@@ -1570,10 +1560,14 @@ function loadScript(data) {
     function makeAutoRefreshButton() {
         const div = document.createElement('div');
         div.setAttribute('id', 'auto-refresh-div');
-        div.style.cssText += `  
+        div.style.cssText += `
+            font-size: 14px;  
+            color: rgba(118, 114, 114, 0.87);
             display: flex;
             align-items: center;
             gap: 0.3rem;
+            margin-left: auto;
+            padding-right: 1.5rem;
         `
         const p = document.createElement('p');
         p.textContent = 'Auto Refresh';
@@ -2096,7 +2090,11 @@ function loadScript(data) {
         overlay.style.alignItems = 'center';
         overlay.style.justifyContent = 'center';
 
-        // pause auto-refresh when in settings
+        // pause auto-refresh when in settings if it was enabled before
+        const value = localStorage.getItem('auto-refresh');
+        if (value === 'true') {
+            clearInterval();
+        }
     }
 
     function closeSettings() {
@@ -2114,6 +2112,10 @@ function loadScript(data) {
         loadTotalsData();
 
         // if refresh was enabled before opening settings, re-enable
+        const value = localStorage.getItem('auto-refresh');
+        if (value === 'true') {
+            startRefreshInterval();
+        }
     }
 
     function loadCurrentCePaths(list) {
@@ -2276,7 +2278,7 @@ function loadScript(data) {
         }
         
         // update ui
-        const parent = document.getElementById('added-navbar-div');
+        const parent = document.getElementsByClassName('mat-tab-labels')[0];
         const autorefreshDiv = document.getElementById('auto-refresh-div');
         autorefreshDiv.remove();
         
