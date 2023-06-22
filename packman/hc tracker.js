@@ -610,12 +610,15 @@ function loadScript(data) {
         const addedNavBarDiv = document.createElement('div');
         addedNavBarDiv.setAttribute('id', 'added-navbar-div');
         addedNavBarDiv.style.cssText += `
-            margin-left: 2rem;
+            margin-left: 1rem;
+            padding-left: 10px;
             font-size: 14px;
             display: flex;
             gap: 2.5rem;
             align-items: center;
             color: rgba(118, 114, 114, 0.87);
+            border-left: 3px solid orange;
+            border-bottom: 3px solid orange;
         `
 
         addedNavBarDiv.appendChild(makeOpenSettingsButton());
@@ -929,10 +932,6 @@ function loadScript(data) {
         div.style.cssText += `
             font-size: 14px;
             font-family: sans-serif;
-            text-decoration-line: underline;
-            text-decoration-thickness: 3px;
-            text-decoration-color: #e5d1ba;
-            text-decoration-skip-ink: none;
             cursor: pointer;
         `
         div.textContent = 'Process Path Settings';
@@ -1341,6 +1340,7 @@ function loadScript(data) {
 
     function makeCeArrowToggle() {
         const div = document.createElement('div');
+        div.setAttribute('id', 'ce-arrow-div');
         div.style.display = 'flex';
 
         const button = document.createElement('button');
@@ -1479,11 +1479,10 @@ function loadScript(data) {
     }
 
     function makePackTable() {
-        // get heights of pick table div elements to make pick and pack tables even in height
         const packTable = document.createElement('table');
         packTable.setAttribute('id', 'pack-table');
         packTable.style.cssText += `
-            margin-top: 170px;
+            margin-top: 125px;
             text-align: center;
             border-collapse: collapse;
         `
@@ -2096,6 +2095,8 @@ function loadScript(data) {
         overlay.style.display = 'flex';
         overlay.style.alignItems = 'center';
         overlay.style.justifyContent = 'center';
+
+        // pause auto-refresh when in settings
     }
 
     function closeSettings() {
@@ -2111,6 +2112,8 @@ function loadScript(data) {
         masterDiv.prepend(newPickDiv);
         loadPickTableData();
         loadTotalsData();
+
+        // if refresh was enabled before opening settings, re-enable
     }
 
     function loadCurrentCePaths(list) {
