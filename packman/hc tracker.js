@@ -2,7 +2,7 @@
 // @name         Packman HC Tracker
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/packman/hc%20tracker.js
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      2.0
+// @version      2.2
 // @description  Display all pick settings, including hcs, and pack hcs
 // @author       mooshahe
 // @match        https://insights.prod-na.pack.aft.a2z.com/packman/recent?fc=*
@@ -77,7 +77,7 @@ function loadScript(data) {
     function startRefreshInterval() {
         interval = setTimeout(() => {
             location.reload();
-        }, 10000);
+        }, 70000);
     }
 
     function clearInterval() {
@@ -111,13 +111,15 @@ function loadScript(data) {
     // used for styling path row
     let pathRow = 0;
 
-    // totals used for the summary table
+    // totals used for the summary tables
     let activePickersTotal = 0;
     let setPickersTotal = 0;
     let activeMultisTotal = 0;
     let setMultisTotal = 0;
     let activeSinglesTotal = 0;
     let setSinglesTotal = 0;
+
+    let activePackersTotal = 0;
 
     // used for timestamp of last refresh
     const date = new Date();
@@ -221,6 +223,7 @@ function loadScript(data) {
     loadPackData();
     loadPackTableData();
     loadTotalsData();
+    loadPackTotalsData();
 
     // there is no get api so must iterate over the DOM and create an object with each packer's information to then parse
 
@@ -596,7 +599,8 @@ function loadScript(data) {
         masterDiv.appendChild(pickDiv);
 
         const packDiv = makePackDiv();
-        packDiv.setAttribute('id', 'pack-div');
+        const packTotals = makePackTotalsDiv();
+        packDiv.appendChild(packTotals);
         const packTable = makePackTable();
         packDiv.appendChild(packTable);
         const saveButton = makeInputSaveButton();
@@ -989,6 +993,12 @@ function loadScript(data) {
 
     function makePackDiv() {
         const packDiv = document.createElement('div');
+        packDiv.setAttribute('id', 'pack-div');
+        packDiv.style.cssText += `
+            display: flex;
+            flex-direction: column;
+            margin-top: 40px;
+        `
 
         return packDiv;
     }
@@ -1468,11 +1478,65 @@ function loadScript(data) {
         return div;
     }
 
+    function makePackTotalsDiv() {
+        const div = document.createElement('div');
+        div.setAttribute('id', 'pack-totals-div');
+        div.style.cssText += `
+            align-self: center;
+            display: flex;
+            gap: 3rem;
+        `
+
+        const activeDiv = document.createElement('div');
+        activeDiv.style.cssText += `
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            padding-bottom: 1rem;
+        `
+        activeDiv.setAttribute('id', 'active-pack-div');
+        const activeTitleDiv = document.createElement('div');
+        activeTitleDiv.textContent = 'Active Packers';
+        activeTitleDiv.style.cssText += `
+            font-size: 0.9rem;
+            color: grey;
+        `
+        activeDiv.appendChild(activeTitleDiv);
+        const activePackers = document.createElement('div');
+        activePackers.setAttribute('id', 'active-packers-div');
+        activePackers.style.fontSize = '2.5rem';
+
+        activeDiv.appendChild(activePackers);
+
+        div.appendChild(activeDiv);
+
+        const setDiv = document.createElement('div');
+        setDiv.setAttribute('id', 'set-pack-div');
+        setDiv.style.cssText += `
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        `
+        const setTitleDiv = document.createElement('div');
+        setTitleDiv.textContent = 'Planned Packers';
+        setTitleDiv.style.cssText += `
+            font-size: 0.9rem;
+            color: grey;
+        `
+        setDiv.appendChild(setTitleDiv);
+        const setPackers = document.createElement('div');
+        setPackers.setAttribute('id', 'set-packers-div');
+        setPackers.style.fontSize = '2.5rem';
+        setDiv.appendChild(setPackers);
+        div.appendChild(setDiv);
+
+        return div;
+    }
+
     function makePackTable() {
         const packTable = document.createElement('table');
         packTable.setAttribute('id', 'pack-table');
         packTable.style.cssText += `
-            margin-top: 125px;
             text-align: center;
             border-collapse: collapse;
         `
@@ -1790,6 +1854,8 @@ function loadScript(data) {
     }
 
     function loadPackTableData() {
+        activePackersTotal = 0;
+
         const packTable = document.getElementById('pack-table');
         const singlesRow = makePackTableRow('singles', packHeadcounts.singles);
         packTable.appendChild(singlesRow);
@@ -1827,6 +1893,8 @@ function loadScript(data) {
             const handtapeRow = makePackTableRow('handtape', packHeadcounts.handTape);
             packTable.appendChild(handtapeRow);
         }
+
+
     }
 
     function getActualRate(tur, activePickers) {
@@ -1860,6 +1928,8 @@ function loadScript(data) {
         const deviationPercent = getDeviationPercent(hc, plannedPackers);
         const deviationTd = makeTd(deviationPercent);
         tr.appendChild(deviationTd);
+
+        activePackersTotal += hc;
 
         return tr;
     }
@@ -2073,6 +2143,25 @@ function loadScript(data) {
         singlesDeviationDiv.textContent = `deviation: ${getDeviationPercent(activeSinglesTotal, setSinglesTotal)}`
     }
 
+    function loadPackTotalsData() {
+        const activePackersDiv = document.getElementById('active-packers-div');
+        activePackersDiv.textContent = activePackersTotal;
+
+        const setPackersDiv = document.getElementById('set-packers-div');
+        setPackersDiv.textContent = getSetPackersTotal();
+    }
+
+    function getSetPackersTotal() {
+        let setPackersTotal = 0;
+        const inputs = Array.from(document.getElementById('pack-table').querySelectorAll('input'));
+        inputs.forEach(input => {
+            let value = input.value === '' ? 0 : input.value;
+            setPackersTotal += parseInt(value);
+        });
+
+        return setPackersTotal;
+    }
+
     /*-----------------/
     -DOM element logic-
     /----------------*/
@@ -2256,15 +2345,24 @@ function loadScript(data) {
         }
 
         // reset pack table for updated info
+        const packTotalsDiv = document.getElementById('pack-totals-div');
+        packTotalsDiv.remove();
         const packTable = document.getElementById('pack-table');
         packTable.remove();
+        const inputBtn = document.getElementById('input-save-btn');
+        inputBtn.remove();
 
         const packDiv = document.getElementById('pack-div');
+        const newTotalsDiv = makePackTotalsDiv();
+        packDiv.appendChild(newTotalsDiv);
         const newPackTable = makePackTable();
-        newPackTable.setAttribute('id', 'pack-table');
-        packDiv.prepend(newPackTable);
+        packDiv.appendChild(newPackTable);
+        const newInputBtn = makeInputSaveButton();
+        packDiv.appendChild(newInputBtn);
+
         loadPackData();
         loadPackTableData();
+        loadPackTotalsData();
     }
 
     function togglingAutoRefresh() {
