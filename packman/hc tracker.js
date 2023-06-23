@@ -2,7 +2,7 @@
 // @name         Packman HC Tracker
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/packman/hc%20tracker.js
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      2.2
+// @version      2.2.1
 // @description  Display all pick settings, including hcs, and pack hcs
 // @author       mooshahe
 // @match        https://insights.prod-na.pack.aft.a2z.com/packman/recent?fc=*
@@ -1234,7 +1234,9 @@ function loadScript(data) {
     function makeTsoPickTable() {
         const tsoTable = document.createElement('table');
         tsoTable.setAttribute('id', 'tso-table');
+        // by default vrets table is hidden
         tsoTable.style.cssText += `
+            display: none;
             text-align: center;
             border-collapse: collapse;
         `
@@ -1398,8 +1400,18 @@ function loadScript(data) {
             gap: 1rem;
             cursor: pointer;
         `
-        button.textContent = '▼';
+        button.textContent = '▶';
         div.appendChild(button);
+
+        const span = document.createElement('span');
+        span.setAttribute('id', 'tso-span');
+        span.textContent = 'Toggle TSO Table';
+        span.style.cssText += `
+                    color: #0073bb;
+                    font-weight: bold;
+                    font-size: 1.1rem;
+                `
+        div.appendChild(span);
 
         button.addEventListener('click', (e) => {
             const tsoTable = document.getElementById('tso-table');
