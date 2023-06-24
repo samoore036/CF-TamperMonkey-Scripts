@@ -98,7 +98,7 @@
 
         const timeDiv = document.createElement('div');
         timeDiv.setAttribute('id', 'modal-input-div');
-        timeDiv.style.cssText += `display: flex; flex-direction: column; gap: 1rem;`
+        timeDiv.style.cssText += `display: flex; flex-direction: column; gap: 2rem;`
         for (let i = 1; i < 6; i++) {
             timeDiv.appendChild(makeTimeInputDiv(i));
         }
@@ -120,7 +120,7 @@
         const button = document.createElement('button');
         button.setAttribute('id', 'close-btn');
         button.style.cssText += `
-            position: relative; bottom: 3rem; left: 36.7rem;
+            position: relative; bottom: 3rem; left: 38.7rem;
             border: medium none;
             font-size: 1.7rem; width: 2.5rem; height: 2.5rem;
             color: white; background-color: rgb(220, 38, 38);
@@ -165,7 +165,7 @@
     
     function makeTimeInputDiv(number) {
         const div = document.createElement('div');
-        div.style.cssText += `display:flex; gap: 1rem;`;
+        div.style.cssText += `display:flex; gap: 2rem;`;
 
         const titleDiv = document.createElement('div');
         titleDiv.textContent = `P/Q${number}`;
@@ -217,7 +217,7 @@
         const modal = document.getElementById('modal');
         modal.style.zIndex = '1000';
         modal.style.position = 'fixed';
-        modal.style.top = '30%';
+        modal.style.top = '20%';
         modal.style.left = '35%';
         modal.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
         modal.style.display = 'flex';
@@ -235,36 +235,28 @@
         modal.style.display = 'none';
     }   
 
+    // save the inputs into local storage with the fc as the key
     function saveModalSettings(e) {
-        const parentElement = e.target.parentElement;
-    
-        // prompt user if input is invalid 
-        if (currentSLA.length !== 0 ) {
-            if (isNaN(currentSLA)) {
-                const errorMessage = document.createElement('p');
-                errorMessage.textContent = 'Please enter a valid number.'
-                errorMessage.style.cssText += `
-                    color: red; font-weight:bold;
-                    position: absolute; bottom: 1vw; text-align: center;
-                    margin: auto; left: 0; right: 0;
-                `
-                parentElement.appendChild(errorMessage);
-                return;
-            }
-        } 
-        
-        // if it all checks out and a number was input, update local storage
-        if (!isNaN(currentSLA) && currentSLA.length !== 0) {
-            localStorage.setItem(`${fc}`, currentSLA);
+        const parent = e.target.parentElement;
+        const inputs = Array.from(parent.querySelectorAll('input'));
+        const timeObject = {
+            startOne: inputs[0].value,
+            endOne: inputs[1].value,
+            startTwo: inputs[2].value,
+            endTwo: inputs[3].value,
+            startThree: inputs[4].value,
+            endThree: inputs[5].value,
+            startFour: inputs[6].value,
+            endFour: inputs[7].value,
+            startFive: inputs[8].value,
+            endFive: inputs[9].value 
         }
-        
-        parentElement.style.display = 'none';
-    
-        const parent = document.getElementsByClassName('rodeo-navigation-links')[0];
-        parent.style.display = 'flex';
-        parent.appendChild(makeSLABar());
-    
-        checkForCpts();
+
+        console.log(timeObject);
+
+        // put the object into storage
+        localStorage.setItem(`${fc}`, JSON.stringify(timeObject));
+        closeModal();
     }
 })(); 
 
