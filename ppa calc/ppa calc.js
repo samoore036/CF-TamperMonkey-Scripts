@@ -27,7 +27,7 @@
     if (!localStorage.getItem(`${fc}`)) {
         openModal();
     } else {
-        
+        loadTimeDisplayDiv();
     }
 
     
@@ -131,32 +131,36 @@
 
         return button;
     }
+
+    function loadTimeDisplayDiv() {
+        const parent = document.querySelector('.cp-submit-row');
+        parent.appendChild(makeTimeDisplayDiv());
+    }
     
-    function makeSLABar() {
-        const slaDiv = document.createElement('div');
-        slaDiv.setAttribute('id', 'sla-div');
-        slaDiv.style.display = 'flex';
-        slaDiv.style.gap = '5px';
-        slaDiv.style.marginLeft = '4vw';
-    
-        const message = document.createElement('p');
-        message.textContent = `Current SLA is ${localStorage.getItem(`${fc}`)} minutes`;
-        message.style.backgroundColor = '#fdba74';
-        message.style.border = '2px solid #fb923c';
-        message.style.fontSize = '0.9rem';
-        message.style.padding = '0.3rem';
-        slaDiv.appendChild(message);
-    
-        const changeButton = document.createElement('button');
-        changeButton.textContent = 'change';
-        changeButton.style.cssText += `
-            display: flex; align-items: center;
-            height: 80%; 
-        `
-        changeButton.addEventListener('click', openSLAModal);
-        slaDiv.appendChild(changeButton);
-    
-        return slaDiv;
+    function makeTimeDisplayDiv() {
+        const div = document.createElement('div');
+        div.setAttribute('id', 'time-display-div');
+        div.style.cssText += `display: flex; justify-content: space-between;`;
+
+        const buttonTray = document.createElement('div');
+        buttonTray.style.cssText += `display: flex`;
+        const fullShiftButton = makeTimeButton('Full Shift');
+        buttonTray.appendChild(fullShiftButton);
+
+        loadTimeButtons(buttonTray);
+
+        const settingsDiv = document.createElement('div');
+        settingsDiv.style.cssText += `align-self: end;`;
+        const settingsBtn = document.createElement('button');
+        settingsBtn.textContent = 'Change Schedule Settings';
+        settingsBtn.type = 'button'; // type necessary to prevent submitting as it is technically in a form
+        settingsBtn.addEventListener('click', openModal);
+        settingsDiv.appendChild(settingsBtn);
+
+        div.appendChild(buttonTray);
+        div.appendChild(settingsDiv);
+
+        return div;
     }
 
     /*************\
@@ -195,18 +199,34 @@
         return div;
     }
 
-    function makeCustomTimeDiv() {
-        const div = document.createElement('div');
+    function makeTimeButton(name) {
+        const button = document.createElement('button');
+        button.textContent = name;
+        button.style.cssText += `
+            border: 2px solid #2e6da4; background-color: #337ab7; color: white;
+            padding: 6px 12px; 
+        `
+        button.type = 'button';
 
-
-        return div;
+        return button;
     }
 
-    function makeButtonDiv(name, timeRange) {
-        const div = document.createElement('div');
-        div.textContent = name;
+    function loadTimeButtons(buttonTray) {
+        // first determine if periods or quarters by checking fourth time. if this is null, it's periods, otherwise quarters
+        let isPeriods = true;
+        const userTimes = getUserTimes();
+        if (userTimes.start4 && userTimes.end4) {
+            isPeriods = false;
+        }
 
-        return div;
+        for (let i = 1; i < 6; i++) {
+            const title = isPeriods ? 'Period' : 'Quarter';
+            const start = userTimes[`start${i}`];
+            const end = userTimes[`end${i}`];
+            if (start && end) {
+                buttonTray.appendChild(makeTimeButton(`${title}${i}`));
+            }
+        }
     }
 
     /*****************\
@@ -233,6 +253,12 @@
     function closeModal() {
         const modal = document.getElementById('modal');
         modal.style.display = 'none';
+
+        // if on close the display div does not exist, make and attach it, otherwise update it
+        if (!document.getElementById('time-display-div')) {
+            loadTimeDisplayDiv();
+        }
+        
     }   
 
     // save the inputs into local storage with the fc as the key
@@ -240,16 +266,16 @@
         const parent = e.target.parentElement;
         const inputs = Array.from(parent.querySelectorAll('input'));
         const timeObject = {
-            startOne: inputs[0].value,
-            endOne: inputs[1].value,
-            startTwo: inputs[2].value,
-            endTwo: inputs[3].value,
-            startThree: inputs[4].value,
-            endThree: inputs[5].value,
-            startFour: inputs[6].value,
-            endFour: inputs[7].value,
-            startFive: inputs[8].value,
-            endFive: inputs[9].value 
+            start1: inputs[0].value,
+            end1: inputs[1].value,
+            start2: inputs[2].value,
+            end2: inputs[3].value,
+            start3: inputs[4].value,
+            end3: inputs[5].value,
+            start4: inputs[6].value,
+            end4: inputs[7].value,
+            start5: inputs[8].value,
+            end5: inputs[9].value 
         }
 
         console.log(timeObject);
@@ -257,6 +283,20 @@
         // put the object into storage
         localStorage.setItem(`${fc}`, JSON.stringify(timeObject));
         closeModal();
+    }
+
+    /***************************\
+    |local storage functionality|
+    \**************************/
+
+    // get the first entry and the last entry
+    function getFullShiftTimes() {
+        const times = getUserTimes();
+        console.log(times);
+    }
+
+    function getUserTimes() {
+        return JSON.parse(localStorage.getItem(`${fc}`));
     }
 })(); 
 
