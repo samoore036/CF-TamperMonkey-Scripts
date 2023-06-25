@@ -140,14 +140,40 @@
     function makeTimeDisplayDiv() {
         const div = document.createElement('div');
         div.setAttribute('id', 'time-display-div');
-        div.style.cssText += `display: flex; justify-content: space-between;`;
+        div.style.cssText += `display: flex; flex-direction: column; justify-content: space-between; gap: 0.5rem;`;
 
-        const buttonTray = document.createElement('div');
-        buttonTray.style.cssText += `display: flex`;
+        const dateButtonTray = document.createElement('div');
+        dateButtonTray.style.cssText += `display: flex; gap: 0.1rem;`;
+        loadDateButtons(dateButtonTray);
+
+        const timeButtonTray = document.createElement('div');
+        timeButtonTray.style.cssText += `display: flex; gap: 0.1rem;`;
         const fullShiftButton = makeTimeButton('Full Shift');
-        buttonTray.appendChild(fullShiftButton);
+        fullShiftButton.addEventListener('click', () => {
+            let endTime;
+            // must iterate backwards to find endtime
+            for (let i = 5; i > 0; i--) {
+                console.log(getUserTimes());
+                if (getUserTimes()[`end${i}`]) {
+                    endTime = getUserTimes()[`end${i}`];
+                    break;
+                }
+            }
+            const startHour = getUserTimes()[`start${1}`].split(':')[0];
+            const startMinute = getUserTimes()[`start${1}`].split(':')[1];
+            const endHour = endTime.split(':')[0];
+            const endMinute = endTime.split(':')[1];
+            document.getElementById('startHourIntraday').selectedIndex = startHour;
+            document.getElementById('startMinuteIntraday').selectedIndex = getSelectIndexMinute(startMinute);
+            document.getElementById('endHourIntraday').selectedIndex = endHour;
+            document.getElementById('endMinuteIntraday').selectedIndex = getSelectIndexMinute(endMinute);
+            console.log(endTime.split(':')[0]);
+            console.log(endTime.split(':')[1]);
+        })
 
-        loadTimeButtons(buttonTray);
+        timeButtonTray.appendChild(fullShiftButton);
+
+        loadTimeButtons(timeButtonTray);
 
         const settingsDiv = document.createElement('div');
         settingsDiv.style.cssText += `align-self: end;`;
@@ -157,7 +183,8 @@
         settingsBtn.addEventListener('click', openModal);
         settingsDiv.appendChild(settingsBtn);
 
-        div.appendChild(buttonTray);
+        div.appendChild(dateButtonTray);
+        div.appendChild(timeButtonTray);
         div.appendChild(settingsDiv);
 
         return div;
@@ -185,6 +212,11 @@
         startInput.placeholder = 'ex: 07:30';
         startDiv.appendChild(startInput);
         div.appendChild(startDiv);
+        if (getUserTimes()) {
+            if (getUserTimes()[`start${number}`]) {
+                startInput.value = getUserTimes()[`start${number}`];
+            }
+        }
 
         const endDiv = document.createElement('div');
         const endPrompt = document.createElement('div');
@@ -195,11 +227,16 @@
         endInput.placeholder = 'ex: 09:45';
         endDiv.appendChild(endInput);
         div.appendChild(endDiv);
+        if (getUserTimes()) {
+            if (getUserTimes()[`end${number}`]) {
+                endInput.value = getUserTimes()[`end${number}`];
+            }
+        }
 
         return div;
     }
 
-    function makeTimeButton(name) {
+    function makeDateButton(name) {
         const button = document.createElement('button');
         button.textContent = name;
         button.style.cssText += `
@@ -208,10 +245,86 @@
         `
         button.type = 'button';
 
+        const today = new Date();
+        const startDate = document.getElementById('startDateIntraday');
+        const endDate = document.getElementById('endDateIntraday');
+        if (name === 'Today') {
+            const year = today.getFullYear();
+            const month = today.getMonth() + 1 < 10 ? `0${today.getMonth() + 1}` : today.getMonth() + 1;
+            const day = today.getDate() < 10 ? `0${today.getDate()}` : today.getDate();
+            button.addEventListener('click', () => {
+                startDate.value = `${year}/${month}/${day}`;
+                endDate.value = `${year}/${month}/${day}`;
+            })
+        } else if (name === 'Yesterday') {
+            today.setDate(today.getDate() - 1);
+            const year = today.getFullYear();
+            const month = today.getMonth() + 1 < 10 ? `0${today.getMonth() + 1}` : today.getMonth() + 1;
+            const day = today.getDate() < 10 ? `0${today.getDate()}` : today.getDate();
+            button.addEventListener('click', () => {
+                startDate.value = `${year}/${month}/${day}`;
+                endDate.value = `${year}/${month}/${day}`;
+            })
+        } else {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterYear = yesterday.getFullYear();
+            const yesterMonth = yesterday.getMonth() + 1 < 10 ? `0${yesterday.getMonth() + 1}` : yesterday.getMonth() + 1;
+            const yesterDay = yesterday.getDate() < 10 ? `0${yesterday.getDate()}` : yesterday.getDate();
+
+            const year = today.getFullYear();
+            const month = today.getMonth() + 1 < 10 ? `0${today.getMonth() + 1}` : today.getMonth() + 1;
+            const day = today.getDate() < 10 ? `0${today.getDate()}` : today.getDate();
+
+            button.addEventListener('click', () => {
+                startDate.value = `${yesterYear}/${yesterMonth}/${yesterDay}`;
+                endDate.value = `${year}/${month}/${day}`;
+            })
+        }
+
         return button;
     }
 
-    function loadTimeButtons(buttonTray) {
+    function makeTimeButton(name, i) {
+        const button = document.createElement('button');
+        button.textContent = name;
+        button.style.cssText += `
+            border: 2px solid #2e6da4; background-color: #337ab7; color: white;
+            padding: 6px 12px; 
+        `
+        button.type = 'button';
+
+        if (i) {
+            button.addEventListener('click', () => {
+                const startHour = getUserTimes()[`start${i}`].split(':')[0];
+                const startMinute = getUserTimes()[`start${i}`].split(':')[1];
+                const endHour = getUserTimes()[`end${i}`].split(':')[0];
+                const endMinute = getUserTimes()[`end${i}`].split(':')[1];
+                console.log(getUserTimes()[`start${i}`]);
+                console.log(getUserTimes()[`end${i}`]);
+                document.getElementById('startHourIntraday').selectedIndex = startHour;
+                document.getElementById('startMinuteIntraday').selectedIndex = getSelectIndexMinute(startMinute);
+                document.getElementById('endHourIntraday').selectedIndex = endHour;
+                document.getElementById('endMinuteIntraday').selectedIndex = getSelectIndexMinute(endMinute);
+            })
+        }
+            
+        return button;
+    }
+
+    // three buttons: yesterday, today, yesterday to today
+    function loadDateButtons(dateButtonTray) {
+        const yesterday = makeDateButton('Yesterday');
+        dateButtonTray.appendChild(yesterday);
+
+        const today = makeDateButton('Today');
+        dateButtonTray.appendChild(today);
+
+        const yesterdayAndToday = makeDateButton('Yesterday to Today');
+        dateButtonTray.appendChild(yesterdayAndToday);
+    }
+
+    function loadTimeButtons(timeButtonTray) {
         // first determine if periods or quarters by checking fourth time. if this is null, it's periods, otherwise quarters
         let isPeriods = true;
         const userTimes = getUserTimes();
@@ -224,8 +337,17 @@
             const start = userTimes[`start${i}`];
             const end = userTimes[`end${i}`];
             if (start && end) {
-                buttonTray.appendChild(makeTimeButton(`${title}${i}`));
+                timeButtonTray.appendChild(makeTimeButton(`${title}${i}`, i));
             }
+        }
+    }
+
+    function getSelectIndexMinute(minutes) {
+        switch(minutes) {
+            case '15': return 1;
+            case '30': return 2;
+            case '45': return 3;
+            default: return 0;
         }
     }
 
@@ -288,12 +410,6 @@
     /***************************\
     |local storage functionality|
     \**************************/
-
-    // get the first entry and the last entry
-    function getFullShiftTimes() {
-        const times = getUserTimes();
-        console.log(times);
-    }
 
     function getUserTimes() {
         return JSON.parse(localStorage.getItem(`${fc}`));
