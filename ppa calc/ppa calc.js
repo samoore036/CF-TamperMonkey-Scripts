@@ -133,6 +133,9 @@
     }
 
     function loadTimeDisplayDiv() {
+        const submitParent = document.querySelector('.cp-submit-row');
+        makeSubmitButtons(submitParent);
+
         const parent = document.querySelector('.cp-submit-row');
         parent.appendChild(makeTimeDisplayDiv());
     }
@@ -188,6 +191,13 @@
         div.appendChild(settingsDiv);
 
         return div;
+    }
+
+    // added submit form buttons that will load the correct displayed info for parsing correctly
+    function makeSubmitButtons(submitDiv) {
+        submitDiv.prepend(makeSubmitButton('Go to rebin'));
+        submitDiv.prepend(makeSubmitButton('Go to pack'));
+        submitDiv.prepend(makeSubmitButton('Go to pick'));
     }
 
     /*************\
@@ -308,6 +318,18 @@
                 document.getElementById('endMinuteIntraday').selectedIndex = getSelectIndexMinute(endMinute);
             })
         }
+            
+        return button;
+    }
+
+    function makeSubmitButton(category) {
+        const button = document.createElement('button');
+        button.textContent = category;
+        button.style.cssText += `
+            border: 1px solid #ccc; background-color: white; color: black; font-size: 12px;
+            padding: 3px 6px; margin-left: 1em;
+        `
+        button.type = 'button';
             
         return button;
     }
