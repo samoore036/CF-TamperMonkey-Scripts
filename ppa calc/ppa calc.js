@@ -379,6 +379,11 @@
         // if on close the display div does not exist, make and attach it, otherwise update it
         if (!document.getElementById('time-display-div')) {
             loadTimeDisplayDiv();
+        } else {
+            // remove old one and reload new one
+            const timeDisplayDiv = document.getElementById('time-display-div');
+            timeDisplayDiv.remove();
+            loadTimeDisplayDiv();
         }
         
     }   
