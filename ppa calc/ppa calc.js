@@ -25,13 +25,15 @@
     // check if the slam pad time is stored in local storage. if not then prompt user to enter the schedule
     // keys are stored as fc and values are the slam pad time in minutes
     if (!localStorage.getItem(`${fc}`)) {
+        loadSubmitButtons();
+        loadSettingsButton();
         openModal();
     } else {
+        loadSubmitButtons();
         loadTimeDisplayDiv();
+        loadSettingsButton();
+        loadTableData();
     }
-
-    
-
 
     getPlanTimes(getBigTableLink());
     console.log(planTimes);
@@ -132,14 +134,21 @@
         return button;
     }
 
-    function loadTimeDisplayDiv() {
-        const submitParent = document.querySelector('.cp-submit-row');
-        makeSubmitButtons(submitParent);
-
+    function loadSubmitButtons() {
         const parent = document.querySelector('.cp-submit-row');
-        parent.appendChild(makeTimeDisplayDiv());
+        makeSubmitButtons(parent);
     }
-    
+
+    function loadTimeDisplayDiv() {
+        const parent = document.querySelector('.cp-submit-row');
+        parent.prepend(makeTimeDisplayDiv());
+    }
+
+    function loadSettingsButton() {
+        const parent = document.querySelector('.cp-submit-row');
+        parent.prepend(makeSettingsBtn());
+    }
+
     function makeTimeDisplayDiv() {
         const div = document.createElement('div');
         div.setAttribute('id', 'time-display-div');
@@ -175,10 +184,17 @@
         })
 
         timeButtonTray.appendChild(fullShiftButton);
-
         loadTimeButtons(timeButtonTray);
 
+        div.appendChild(dateButtonTray);
+        div.appendChild(timeButtonTray);
+
+        return div;
+    }
+
+    function makeSettingsBtn() {
         const settingsDiv = document.createElement('div');
+        settingsDiv.setAttribute('id', 'schedule-settings-button');
         settingsDiv.style.cssText += `align-self: end;`;
         const settingsBtn = document.createElement('button');
         settingsBtn.textContent = 'Change Schedule Settings';
@@ -186,14 +202,10 @@
         settingsBtn.addEventListener('click', openModal);
         settingsDiv.appendChild(settingsBtn);
 
-        div.appendChild(dateButtonTray);
-        div.appendChild(timeButtonTray);
-        div.appendChild(settingsDiv);
-
-        return div;
+        return settingsDiv;
     }
 
-    // added submit form buttons that will load the correct displayed info for parsing correctly
+    // adds submit form buttons that will load the correct displayed info for parsing correctly
     function makeSubmitButtons(submitDiv) {
         submitDiv.prepend(makeSubmitButton('Go to rebin'));
         submitDiv.prepend(makeSubmitButton('Go to pack'));
@@ -327,9 +339,16 @@
         button.textContent = category;
         button.style.cssText += `
             border: 1px solid #ccc; background-color: white; color: black; font-size: 12px;
-            padding: 3px 6px; margin-left: 1em;
+            padding: 3px 6px; margin-left: 1em; margin-top: 1rem;
         `
         button.type = 'button';
+        if (category.includes('pick')) {
+            button.addEventListener('click', goToPick);
+        } else if (category.includes('pack')) {
+            button.addEventListener('click', goToPack);
+        } else if (category.includes('rebin')) {
+            button.addEventListener('click', goToRebin);
+        }
             
         return button;
     }
@@ -398,6 +417,7 @@
         const modal = document.getElementById('modal');
         modal.style.display = 'none';
 
+
         // if on close the display div does not exist, make and attach it, otherwise update it
         if (!document.getElementById('time-display-div')) {
             loadTimeDisplayDiv();
@@ -407,7 +427,12 @@
             timeDisplayDiv.remove();
             loadTimeDisplayDiv();
         }
-        
+
+        // must remove old settings div and reattach either way
+        const settingsDiv = document.getElementById('schedule-settings-button');
+        settingsDiv.remove();
+        loadSettingsButton();
+        loadTableData();
     }   
 
     // save the inputs into local storage with the fc as the key
@@ -434,12 +459,59 @@
         closeModal();
     }
 
+    function goToPick() {
+        const urlFirstHalf = `https://fclm-portal.amazon.com/ppa/inspect/process?primaryAttribute=UNIT_FLOW_TYPE&secondaryAttribute=PICKING_PROCESS_PATH&nodeType=FC&warehouseId=${fc}&processId=100008`;
+        window.location.assign(`${urlFirstHalf}${getDateUrlEnding()}`);
+    }
+
+    function goToPack() {
+        const urlFirstHalf = `https://fclm-portal.amazon.com/ppa/inspect/process?primaryAttribute=PACK_FLOW&secondaryAttribute=PACK_TYPE&nodeType=FC&warehouseId=${fc}&processId=100054`;
+        window.location.assign(`${urlFirstHalf}${getDateUrlEnding()}`);
+    }
+
+    function goToRebin() {
+        const urlFirstHalf = `https://fclm-portal.amazon.com/ppa/inspect/process?primaryAttribute=WORK_FLOW&secondaryAttribute=PICKING_PROCESS_PATH&nodeType=FC&warehouseId=${fc}&processId=100053`;
+        window.location.assign(`${urlFirstHalf}${getDateUrlEnding()}`);
+    }
+
+    // returns the ending date parameter portion for the submit url which is the same for each process
+    function getDateUrlEnding() {
+        const startDate = document.getElementById('startDateIntraday').value;
+        const startDateYear = startDate.split('/')[0];
+        const startDateMonth = startDate.split('/')[1];
+        const startDateDay = startDate.split('/')[2];
+        const startHourIntraday = document.getElementById('startHourIntraday').value;
+        const startMinuteIntraday = document.getElementById('startMinuteIntraday').value;
+        const endDate = document.getElementById('endDateIntraday').value;
+        const endDateYear = endDate.split('/')[0];
+        const endDateMonth = endDate.split('/')[1];
+        const endDateDay = endDate.split('/')[2];
+        const endHourIntraday = document.getElementById('endHourIntraday').value;
+        const endMinuteIntraday = document.getElementById('endMinuteIntraday').value;
+
+        return `&startDateDay=2019%2F12%2F20&startDateWeek=2019%2F12%2F20&startDateMonth=2022%2F08%2F01&maxIntradayDays=1&spanType=Intraday&startDateIntraday=${startDateYear}%2F${startDateMonth}%2F${startDateDay}&startHourIntraday=${startHourIntraday}&startMinuteIntraday=${startMinuteIntraday}&endDateIntraday=${endDateYear}%2F${endDateMonth}%2F${endDateDay}&endHourIntraday=${endHourIntraday}&endMinuteIntraday=${endMinuteIntraday}`;
+    }
+
     /***************************\
     |local storage functionality|
-    \**************************/
+    \***************************/
 
     function getUserTimes() {
         return JSON.parse(localStorage.getItem(`${fc}`));
+    }
+
+    /****************\
+    |table data logic|
+    \****************/
+    function loadTableData() {
+        const process = document.getElementById('select2-processSelector-container').textContent;
+        if (process.includes('Pick')) {
+            console.log('load pick table');
+        } else if (process.includes('Pack')) {
+            console.log('load pack table');
+        } else if (process.includes('Rebin')) {
+            console.log('load rebin table');
+        }
     }
 })(); 
 
