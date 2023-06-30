@@ -595,15 +595,26 @@
             const parent = document.getElementsByClassName('row')[0];
 
             const div = document.createElement('div');
-            div.setAttribute('id', 'pick-table');
-            div.style.cssText += `display: flex; gap: 5rem; margin-top: 16px;`
+            div.setAttribute('id', 'pick-div');
+            div.style.cssText += `display: flex; flex-direction: column; margin-top: 4rem`;
+
+            const p = document.createElement('p');
+            const date = planTime.split('T')[0];
+            const time = planTime.split('T')[1].replace('Z', '');
+            p.textContent = `Data pulled from plan uploaded at ${time}, ${date}`;
+            p.style.cssText += `font-size: 16px; align-self: center;`;
+            div.appendChild(p);
             
+            const tableDiv = document.createElement('div');
+            div.setAttribute('id', 'table-div');
+            tableDiv.style.cssText += `display: flex; gap: 5rem; margin-top: 16px;`
             const pickHcTable = makePickHcTable(pickData);
-            div.appendChild(pickHcTable);
+            tableDiv.appendChild(pickHcTable);
             const pickRateTable = makePickRateTable(pickData);
-            div.appendChild(pickRateTable);
+            tableDiv.appendChild(pickRateTable);
             const pickCapacityTable = makePickCapacityTable(pickData);
-            div.appendChild(pickCapacityTable);
+            tableDiv.appendChild(pickCapacityTable);
+            div.appendChild(tableDiv);
 
             parent.prepend(div);
         }
@@ -691,8 +702,15 @@
                 pickRateTable.appendChild(makeRateRow(processPath, pickData[`${processPath}`])); // only make table if there was a planned picker otherwise skip
             } 
         }
+
+        // blank row to align with paths of other tables
         const blankRow = document.createElement('tr');
-        pickRateTable.appendChild(makeTotalRow(0, 0, 0));
+        blankRow.style.cssText += `color: white; font-size: 16px; border-top: 3px solid black;`;
+        const blankTd = document.createElement('td');
+        blankTd.textContent = 'blank on purpose';
+        blankTd.style.cssText += `padding: 2px 0.5rem 2px 0.3rem;`;
+        blankRow.appendChild(blankTd);
+        pickRateTable.appendChild(blankRow);
 
         return pickRateTable;
     }
