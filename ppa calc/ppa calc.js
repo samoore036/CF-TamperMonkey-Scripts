@@ -554,7 +554,7 @@
     }
 
     function goToPack() {
-        const urlFirstHalf = `https://fclm-portal.amazon.com/ppa/inspect/process?primaryAttribute=PACK_FLOW&secondaryAttribute=PACK_TYPE&nodeType=FC&warehouseId=${fc}&processId=100054`;
+        const urlFirstHalf = `https://fclm-portal.amazon.com/ppa/inspect/process?primaryAttribute=UNIT_FLOW_TYPE&secondaryAttribute=PICKING_PROCESS_PATH&nodeType=FC&warehouseId=${fc}&processId=100054`;
         window.location.assign(`${urlFirstHalf}${getDateUrlEnding()}`);
     }
 
