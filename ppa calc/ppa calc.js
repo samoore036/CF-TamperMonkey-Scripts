@@ -33,6 +33,9 @@
     let actualCapacityTotal = 0;
     let capacityDeltaTotal = 0;
 
+    // used to alternate row colors
+    let rowCount = 0;
+
     setupDom();
     
     
@@ -364,8 +367,8 @@
         const td = document.createElement('td');
         td.textContent = str;
         td.style.cssText += `
-            padding: 2px 12px;
-            font-size: 16px;
+            padding: 2px 16px;
+            font-size: 14px;
             font-weight: bold;
             line-height: 20px;
         `
@@ -397,12 +400,17 @@
             font-size: 16px;
             background-color: ${delta <= diff ? 'rgb(248, 113, 113)' : 'none'};
         `
+        if (delta <= diff) {
+            td.style.cssText += `cursor: help`;
+            td.title = 'Deviating more than 10% under to plan';
+        }
 
         return td;
     }
 
     function makeHcRow(pathName, processPath) {
         const row = document.createElement('tr');
+        row.style.backgroundColor = rowCount % 2 === 0 ? 'white' : '#e5e7eb';
 
         const ppTd = makeTd(pathName);
         ppTd.style.cssText += `padding-left: 0.3rem; padding-right: 0.5rem; text-align: left;`
@@ -416,22 +424,34 @@
         row.appendChild(makeDeltaTd(processPath.planned_hc, actualHc));
         pickDeltaTotal += actualHc - processPath.planned_hc;
 
+        rowCount++;
         return row;
     }
 
     function makeRateRow(pathName, processPath) {
         const row = document.createElement('tr');
-        row.appendChild(makeTd(pathName));
+        row.style.backgroundColor = rowCount % 2 === 0 ? 'white' : '#e5e7eb';
+
+        const ppTd = makeTd(pathName);
+        ppTd.style.cssText += `padding-left: 0.3rem; padding-right: 0.5rem; text-align: left;`
+        row.appendChild(ppTd);
+
         row.appendChild(makeTd(processPath.planned_rate));
         row.appendChild(makeTd(processPath.actual_rate));
         row.appendChild(makeDeltaTd(processPath.planned_rate, processPath.actual_rate));
 
+        rowCount++;
         return row;
     }
 
     function makeCapacityRow(pathName, processPath) {
         const row = document.createElement('tr');
-        row.appendChild(makeTd(pathName));
+        row.style.backgroundColor = rowCount % 2 === 0 ? 'white' : '#e5e7eb';
+
+        const ppTd = makeTd(pathName);
+        ppTd.style.cssText += `padding-left: 0.3rem; padding-right: 0.5rem; text-align: left;`
+        row.appendChild(ppTd);
+
         const plannedCapacity = processPath.planned_rate * processPath.planned_hc * getTimeDiff();
         plannedCapacityTotal += plannedCapacity;
         row.appendChild(makeTd(plannedCapacity.toFixed(1)));
@@ -444,6 +464,7 @@
         capacityDeltaTotal += capacityDelta;
         row.appendChild(makeDeltaTd(plannedCapacity, actualCapacity));
 
+        rowCount++;
         return row;
     }
 
@@ -646,6 +667,22 @@
         const pickHcTable = document.createElement('table');
         pickHcTable.style.cssText += `text-align: center; border-collapse: collapse;`
 
+        const titleRow = document.createElement('tr');
+        titleRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #3b82f6;
+            border: 1px solid black;
+            border-bottom: none;
+        `
+
+        const titleHeader = document.createElement('td');
+        titleHeader.textContent = 'Headcounts';
+        titleHeader.style.cssText += `text-align: center; font-size: 1.6rem; font-weight: bold;`;
+        titleHeader.colSpan = '4';
+        titleRow.appendChild(titleHeader);
+        pickHcTable.appendChild(titleRow);
+
         const categoriesRow = document.createElement('tr');
         categoriesRow.style.cssText += `
             font-size: 1.2rem;
@@ -677,6 +714,22 @@
 
     function makePickRateTable(pickData) {
         const pickRateTable = document.createElement('table');
+
+        const titleRow = document.createElement('tr');
+        titleRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #3b82f6;
+            border: 1px solid black;
+            border-bottom: none;
+        `
+
+        const titleHeader = document.createElement('td');
+        titleHeader.textContent = 'Rates';
+        titleHeader.style.cssText += `text-align: center; font-size: 1.6rem; font-weight: bold;`;
+        titleHeader.colSpan = '4';
+        titleRow.appendChild(titleHeader);
+        pickRateTable.appendChild(titleRow);
 
         const categoriesRow = document.createElement('tr');
         categoriesRow.style.cssText += `
@@ -717,6 +770,22 @@
 
     function makePickCapacityTable(pickData) {
         const pickCapacityTable = document.createElement('table');
+
+        const titleRow = document.createElement('tr');
+        titleRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #3b82f6;
+            border: 1px solid black;
+            border-bottom: none;
+        `
+
+        const titleHeader = document.createElement('td');
+        titleHeader.textContent = 'Capacities';
+        titleHeader.style.cssText += `text-align: center; font-size: 1.6rem; font-weight: bold;`;
+        titleHeader.colSpan = '4';
+        titleRow.appendChild(titleHeader);
+        pickCapacityTable.appendChild(titleRow);
 
         const categoriesRow = document.createElement('tr');
         categoriesRow.style.cssText += `
