@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      0.3
+// @version      0.4
 // @description  Pull planned hcs/rates and compare against ppa
 // @author       mooshahe
 // @match        https://fclm-portal.amazon.com/ppa/inspect/*
@@ -20,15 +20,9 @@
     \****************/
     const fc = document.getElementById('fcpn-site-input').value;
     const planTimes = [];
-    let plannedPickerTotal = 0;
-    let actualPickerTotal = 0;
-    let pickDeltaTotal = 0;
-    let plannedPackerTotal = 0;
-    let actualPackerTotal = 0;
-    let packDeltaTotal = 0;
-    let plannedRebinTotal = 0;
-    let actualRebinTotal = 0;
-    let rebinDeltaTotal = 0;
+    let plannedTotal = 0;
+    let actualTotal = 0;
+    let deltaTotal = 0;
     let plannedCapacityTotal = 0;
     let actualCapacityTotal = 0;
     let capacityDeltaTotal = 0;
@@ -421,12 +415,12 @@
         row.appendChild(ppTd);
 
         row.appendChild(makeTd(processPath.planned_hc));
-        plannedPickerTotal += processPath.planned_hc;
+        plannedTotal += processPath.planned_hc;
         const actualHc = parseFloat(parseFloat(processPath.actual_hc) / getTimeDiff().toFixed(1));
         row.appendChild(makeTd(actualHc.toFixed(1)));
-        actualPickerTotal += actualHc;
+        actualTotal += actualHc;
         row.appendChild(makeDeltaTd(processPath.planned_hc, actualHc));
-        pickDeltaTotal += actualHc - processPath.planned_hc;
+        deltaTotal += actualHc - processPath.planned_hc;
 
         rowCount++;
         return row;
@@ -621,7 +615,7 @@
             const parent = document.getElementsByClassName('row')[0];
 
             const div = document.createElement('div');
-            div.setAttribute('id', 'pick-div');
+            div.setAttribute('id', 'main-div');
             div.style.cssText += `display: flex; flex-direction: column; margin-top: 4rem`;
 
             const p = document.createElement('p');
@@ -634,11 +628,11 @@
             const tableDiv = document.createElement('div');
             div.setAttribute('id', 'table-div');
             tableDiv.style.cssText += `display: flex; gap: 5rem; margin-top: 16px;`
-            const pickHcTable = makePickHcTable(pickData);
+            const pickHcTable = makeHcTable(pickData);
             tableDiv.appendChild(pickHcTable);
-            const pickRateTable = makePickRateTable(pickData);
+            const pickRateTable = makeRateTable(pickData);
             tableDiv.appendChild(pickRateTable);
-            const pickCapacityTable = makePickCapacityTable(pickData);
+            const pickCapacityTable = makeCapacityTable(pickData);
             tableDiv.appendChild(pickCapacityTable);
             div.appendChild(tableDiv);
 
@@ -646,12 +640,38 @@
         }
     }
 
-    function loadPackTable(planTime) {
+    async function loadPackTable(planTime) {
         // if undefined make a table that allows manual inputs for calculation
         if (!planTime) {
             makeManualPackTable();
         } else {
+            const packData = await makePackDataObject(planTime);
+            console.log(packData);
+            const parent = document.getElementsByClassName('row')[0];
 
+            const div = document.createElement('div');
+            div.setAttribute('id', 'main-div');
+            div.style.cssText += `display: flex; flex-direction: column; margin-top: 4rem`;
+
+            const p = document.createElement('p');
+            const date = planTime.split('T')[0];
+            const time = planTime.split('T')[1].replace('Z', '');
+            p.textContent = `Data pulled from plan uploaded at ${time}, ${date}`;
+            p.style.cssText += `font-size: 16px; align-self: center;`;
+            div.appendChild(p);
+            
+            const tableDiv = document.createElement('div');
+            div.setAttribute('id', 'table-div');
+            tableDiv.style.cssText += `display: flex; gap: 5rem; margin-top: 16px;`
+            const packHcTable = makeHcTable(packData);
+            tableDiv.appendChild(packHcTable);
+            const packRateTable = makeRateTable(packData);
+            tableDiv.appendChild(packRateTable);
+            const packCapacityTable = makeCapacityTable(packData);
+            tableDiv.appendChild(packCapacityTable);
+            div.appendChild(tableDiv);
+
+            parent.prepend(div);
         }
     }
 
@@ -668,9 +688,9 @@
     |ppa table logic|
     \***************/
 
-    function makePickHcTable(pickData) {
-        const pickHcTable = document.createElement('table');
-        pickHcTable.style.cssText += `text-align: center; border-collapse: collapse;`
+    function makeHcTable(data) {
+        const hcTable = document.createElement('table');
+        hcTable.style.cssText += `text-align: center; border-collapse: collapse;`
 
         const titleRow = document.createElement('tr');
         titleRow.style.cssText += `
@@ -686,7 +706,7 @@
         titleHeader.style.cssText += `text-align: center; font-size: 1.6rem; font-weight: bold;`;
         titleHeader.colSpan = '4';
         titleRow.appendChild(titleHeader);
-        pickHcTable.appendChild(titleRow);
+        hcTable.appendChild(titleRow);
 
         const categoriesRow = document.createElement('tr');
         categoriesRow.style.cssText += `
@@ -705,20 +725,20 @@
         categoriesRow.appendChild(td3);
         const td4 = makeHeaderTd('Delta');
         categoriesRow.appendChild(td4);
-        pickHcTable.appendChild(categoriesRow);
+        hcTable.appendChild(categoriesRow);
 
-        for (const processPath in pickData) {
-            if (pickData[`${processPath}`].planned_hc) {
-                pickHcTable.appendChild(makeHcRow(processPath, pickData[`${processPath}`])); // only make table if there was a planned picker otherwise skip
+        for (const processPath in data) {
+            if (data[`${processPath}`].planned_hc) {
+                hcTable.appendChild(makeHcRow(processPath, data[`${processPath}`])); // only make table if there was a planned hc otherwise skip
             } 
         }
-        pickHcTable.appendChild(makeTotalRow(plannedPickerTotal, actualPickerTotal, pickDeltaTotal));
+        hcTable.appendChild(makeTotalRow(plannedTotal, actualTotal, deltaTotal));
 
-        return pickHcTable;
+        return hcTable;
     }
 
-    function makePickRateTable(pickData) {
-        const pickRateTable = document.createElement('table');
+    function makeRateTable(data) {
+        const rateTable = document.createElement('table');
 
         const titleRow = document.createElement('tr');
         titleRow.style.cssText += `
@@ -734,7 +754,7 @@
         titleHeader.style.cssText += `text-align: center; font-size: 1.6rem; font-weight: bold;`;
         titleHeader.colSpan = '4';
         titleRow.appendChild(titleHeader);
-        pickRateTable.appendChild(titleRow);
+        rateTable.appendChild(titleRow);
 
         const categoriesRow = document.createElement('tr');
         categoriesRow.style.cssText += `
@@ -753,11 +773,11 @@
         categoriesRow.appendChild(td3);
         const td4 = makeHeaderTd('Delta');
         categoriesRow.appendChild(td4);
-        pickRateTable.appendChild(categoriesRow);
+        rateTable.appendChild(categoriesRow);
 
-        for (const processPath in pickData) {
-            if (pickData[`${processPath}`].planned_hc) {
-                pickRateTable.appendChild(makeRateRow(processPath, pickData[`${processPath}`])); // only make table if there was a planned picker otherwise skip
+        for (const processPath in data) {
+            if (data[`${processPath}`].planned_hc) {
+                rateTable.appendChild(makeRateRow(processPath, data[`${processPath}`])); // only make table if there was a planned hc otherwise skip
             } 
         }
 
@@ -768,13 +788,13 @@
         blankTd.textContent = 'blank on purpose';
         blankTd.style.cssText += `padding: 2px 0.5rem 2px 0.3rem;`;
         blankRow.appendChild(blankTd);
-        pickRateTable.appendChild(blankRow);
+        rateTable.appendChild(blankRow);
 
-        return pickRateTable;
+        return rateTable;
     }
 
-    function makePickCapacityTable(pickData) {
-        const pickCapacityTable = document.createElement('table');
+    function makeCapacityTable(data) {
+        const capacityTable = document.createElement('table');
 
         const titleRow = document.createElement('tr');
         titleRow.style.cssText += `
@@ -790,7 +810,7 @@
         titleHeader.style.cssText += `text-align: center; font-size: 1.6rem; font-weight: bold;`;
         titleHeader.colSpan = '4';
         titleRow.appendChild(titleHeader);
-        pickCapacityTable.appendChild(titleRow);
+        capacityTable.appendChild(titleRow);
 
         const categoriesRow = document.createElement('tr');
         categoriesRow.style.cssText += `
@@ -809,16 +829,16 @@
         categoriesRow.appendChild(td3);
         const td4 = makeHeaderTd('Delta');
         categoriesRow.appendChild(td4);
-        pickCapacityTable.appendChild(categoriesRow);
+        capacityTable.appendChild(categoriesRow);
 
-        for (const processPath in pickData) {
-            if (pickData[`${processPath}`].planned_hc) {
-                pickCapacityTable.appendChild(makeCapacityRow(processPath, pickData[`${processPath}`])); // only make table if there was a planned picker otherwise skip
+        for (const processPath in data) {
+            if (data[`${processPath}`].planned_hc) {
+                capacityTable.appendChild(makeCapacityRow(processPath, data[`${processPath}`])); // only make table if there was a planned hc otherwise skip
             } 
         }
-        pickCapacityTable.appendChild(makeTotalRow(plannedCapacityTotal, actualCapacityTotal, capacityDeltaTotal));
+        capacityTable.appendChild(makeTotalRow(plannedCapacityTotal, actualCapacityTotal, capacityDeltaTotal));
 
-        return pickCapacityTable;
+        return capacityTable;
     }
 
     
@@ -920,6 +940,22 @@
         });
     }
 
+    function getPackData(planTime) {
+        return new Promise(function(resolve) {
+            GM.xmlHttpRequest({
+                method: 'GET',
+                url: `https://ecft.fulfillment.a2z.com/api/NA/nssp/get_nssp_pg_extended?fc=${fc}&senttimestamp=${planTime}&region=NA`,
+                onreadystatechange: function(response) {
+                    if (response.readyState == 4 && response.status == 200) {
+                        resolve(this.response);
+                    } 
+                }
+            })
+        }).then((data) => {
+            return data
+        });
+    }
+
     // returns an object with all planned pick data from API and all actual pick data from PPA pick table
     async function makePickDataObject(planTime) {
         const pickData = await getPickData(planTime);
@@ -927,7 +963,7 @@
         const allPickData = {};
         for (let i = 0; i < parsedPickData.length; i++) {
             const processPath = parsedPickData[i].pp_name;
-            const actualsData = getPickPpaInfo(processPath);
+            const actualsData = getProcessPathInfo(processPath);
             allPickData[`${processPath}`] = {};
 
             allPickData[`${processPath}`]['planned_hc'] = parsedPickData[i].planned_hc_hr;
@@ -943,10 +979,34 @@
         return allPickData;
     }
 
+    // gets info from the pick api which has pack data per process path
+    async function makePackDataObject(planTime) {
+        const packData = await getPickData(planTime);
+        const parsedPackData = JSON.parse(packData);
+        console.log(parsedPackData);
+        const allPackData = {};
+        for (let i = 0; i < parsedPackData.length; i++) {
+            const processPath = parsedPackData[i].pp_name;
+            const actualsData = getProcessPathInfo(processPath);
+            allPackData[`${processPath}`] = {};
+
+            allPackData[`${processPath}`]['planned_hc'] = parsedPackData[i].hc_pack;
+            allPackData[`${processPath}`]['actual_hc'] = actualsData ? actualsData[5].textContent : 0;
+
+            allPackData[`${processPath}`]['planned_rate'] = parseFloat(parsedPackData[i].rate_pack.toFixed(1));
+            allPackData[`${processPath}`]['actual_rate'] = actualsData ? actualsData[7].textContent : 0;
+
+            allPackData[`${processPath}`]['planned_quantity_hr'] = Math.round(parsedPackData[i].hc_pack * parsedPackData[i].rate_pack);
+            allPackData[`${processPath}`]['actual_quantity'] = actualsData ? actualsData[2].textContent : 0;
+        }
+
+        return allPackData;
+    }
+
     // returns the row of the appropriate process path. if not found in table, return null
-    function getPickPpaInfo(processPath) {
-        const pickRows = Array.from(document.querySelectorAll('tbody')[1].querySelectorAll('tr'));
-        for (const row of pickRows) {
+    function getProcessPathInfo(processPath) {
+        const ppRows = Array.from(document.querySelectorAll('tbody')[1].querySelectorAll('tr'));
+        for (const row of ppRows) {
             if (row.querySelectorAll('td')[0].textContent.toLowerCase() === processPath.toLowerCase()) {
                 return Array.from(row.querySelectorAll('td'));
             } 
