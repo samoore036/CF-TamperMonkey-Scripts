@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      0.2
+// @version      0.3
 // @description  Pull planned hcs/rates and compare against ppa
 // @author       mooshahe
 // @match        https://fclm-portal.amazon.com/ppa/inspect/*
@@ -49,8 +49,11 @@
         loadSubmitButtons();
         loadTimeDisplayDiv();
         loadSettingsButton();
-        // only load table data if it is not full shift i.e. if the difference between start and end hours is less than 7
-        if (Math.abs(document.getElementById('startHourIntraday').value - document.getElementById('endHourIntraday').value) < 7) {
+        // only load table data if it's not already loaded in
+        if (document.getElementById('table-div')) {
+            return;
+            // only load table data if it is not full shift i.e. if the difference between start and end hours is less than 7
+        } else if (Math.abs(document.getElementById('startHourIntraday').value - document.getElementById('endHourIntraday').value) < 7) {
             loadTableData();
         }
     }
@@ -383,6 +386,7 @@
             border: 1px solid black;
             padding: 2px 12px;
             font-size: 16px;
+            text-align: center;
         `
 
         return td;
@@ -594,6 +598,7 @@
     /****************\
     |table data logic|
     \****************/
+
     async function loadTableData() {
         const planTime = await getPlanTime();
         const process = document.getElementById('select2-processSelector-container').textContent;
@@ -694,9 +699,9 @@
 
         const td1 = makeHeaderTd('Process Path');
         categoriesRow.appendChild(td1);
-        const td2 = makeHeaderTd('Planned Pickers');
+        const td2 = makeHeaderTd('Planned');
         categoriesRow.appendChild(td2);
-        const td3 = makeHeaderTd('Actual Pickers');
+        const td3 = makeHeaderTd('Actual');
         categoriesRow.appendChild(td3);
         const td4 = makeHeaderTd('Delta');
         categoriesRow.appendChild(td4);
@@ -742,9 +747,9 @@
 
         const td1 = makeHeaderTd('Process Path');
         categoriesRow.appendChild(td1);
-        const td2 = makeHeaderTd('Planned Rate');
+        const td2 = makeHeaderTd('Planned');
         categoriesRow.appendChild(td2);
-        const td3 = makeHeaderTd('Actual Rate');
+        const td3 = makeHeaderTd('Actual');
         categoriesRow.appendChild(td3);
         const td4 = makeHeaderTd('Delta');
         categoriesRow.appendChild(td4);
@@ -798,9 +803,9 @@
 
         const td1 = makeHeaderTd('Process Path');
         categoriesRow.appendChild(td1);
-        const td2 = makeHeaderTd('Planned Capacity');
+        const td2 = makeHeaderTd('Planned');
         categoriesRow.appendChild(td2);
-        const td3 = makeHeaderTd('Actual Capacity');
+        const td3 = makeHeaderTd('Actual');
         categoriesRow.appendChild(td3);
         const td4 = makeHeaderTd('Delta');
         categoriesRow.appendChild(td4);
