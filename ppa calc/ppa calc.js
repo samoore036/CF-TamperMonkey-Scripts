@@ -390,7 +390,7 @@
         const delta = actual - planned;
         const diff = planned * -.10;
         const td = document.createElement('td');
-        td.textContent = delta.toFixed(2);
+        td.textContent = delta.toFixed(1);
         td.style.cssText += `
             border: 1px solid black;
             padding: 2px 12px;
@@ -410,8 +410,8 @@
 
         row.appendChild(makeTd(processPath.planned_hc));
         plannedPickerTotal += processPath.planned_hc;
-        const actualHc = parseFloat(parseFloat(processPath.actual_hc) / getTimeDiff().toFixed(2));
-        row.appendChild(makeTd(actualHc.toFixed(2)));
+        const actualHc = parseFloat(parseFloat(processPath.actual_hc) / getTimeDiff().toFixed(1));
+        row.appendChild(makeTd(actualHc.toFixed(1)));
         actualPickerTotal += actualHc;
         row.appendChild(makeDeltaTd(processPath.planned_hc, actualHc));
         pickDeltaTotal += actualHc - processPath.planned_hc;
@@ -434,11 +434,11 @@
         row.appendChild(makeTd(pathName));
         const plannedCapacity = processPath.planned_rate * processPath.planned_hc * getTimeDiff();
         plannedCapacityTotal += plannedCapacity;
-        row.appendChild(makeTd(plannedCapacity.toFixed(2)));
+        row.appendChild(makeTd(plannedCapacity.toFixed(1)));
 
         const actualCapacity = processPath.actual_rate * processPath.actual_hc;
         actualCapacityTotal += actualCapacity;
-        row.appendChild(makeTd(actualCapacity.toFixed(2)));
+        row.appendChild(makeTd(actualCapacity.toFixed(1)));
 
         const capacityDelta = actualCapacity - plannedCapacity;
         capacityDeltaTotal += capacityDelta;
@@ -455,9 +455,9 @@
         totalTd.style.cssText += `padding-left: 0.3rem; padding-right: 0.5rem; text-align: left;`
         row.appendChild(totalTd);
 
-        row.appendChild(makeTd(planned.toFixed(2)));
-        row.appendChild(makeTd(actual.toFixed(2)));
-        row.appendChild(makeTd(delta.toFixed(2)));
+        row.appendChild(makeTd(planned.toFixed(1)));
+        row.appendChild(makeTd(actual.toFixed(1)));
+        row.appendChild(makeTd(delta.toFixed(1)));
 
         return row;
     }
@@ -839,13 +839,13 @@
             allPickData[`${processPath}`] = {};
 
             allPickData[`${processPath}`]['planned_hc'] = parsedPickData[i].planned_hc_hr;
-            allPickData[`${processPath}`]['actual_hc'] = actualsData ? actualsData[5].textContent : null;
+            allPickData[`${processPath}`]['actual_hc'] = actualsData ? actualsData[5].textContent : 0;
 
             allPickData[`${processPath}`]['planned_rate'] = parseFloat(parsedPickData[i].rate_pick.toFixed(1));
-            allPickData[`${processPath}`]['actual_rate'] = actualsData ? actualsData[7].textContent : null;
+            allPickData[`${processPath}`]['actual_rate'] = actualsData ? actualsData[7].textContent : 0;
 
             allPickData[`${processPath}`]['planned_quantity_hr'] = Math.round(parsedPickData[i].planned_hc_hr * parsedPickData[i].rate_pick);
-            allPickData[`${processPath}`]['actual_quantity'] = actualsData ? actualsData[2].textContent : null;
+            allPickData[`${processPath}`]['actual_quantity'] = actualsData ? actualsData[2].textContent : 0;
         }
 
         return allPickData;
