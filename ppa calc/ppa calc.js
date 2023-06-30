@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      0.1
+// @version      0.2
 // @description  Pull planned hcs/rates and compare against ppa
 // @author       mooshahe
 // @match        https://fclm-portal.amazon.com/ppa/inspect/*
@@ -20,7 +20,21 @@
     \****************/
     const fc = document.getElementById('fcpn-site-input').value;
     const planTimes = [];
+    let plannedPickerTotal = 0;
+    let actualPickerTotal = 0;
+    let pickDeltaTotal = 0;
+    let plannedPackerTotal = 0;
+    let actualPackerTotal = 0;
+    let packDeltaTotal = 0;
+    let plannedRebinTotal = 0;
+    let actualRebinTotal = 0;
+    let rebinDeltaTotal = 0;
+    let plannedCapacityTotal = 0;
+    let actualCapacityTotal = 0;
+    let capacityDeltaTotal = 0;
+
     setupDom();
+    
     
     // check if the slam pad time is stored in local storage. if not then prompt user to enter the schedule
     // keys are stored as fc and values are the slam pad time in minutes
@@ -32,52 +46,11 @@
         loadSubmitButtons();
         loadTimeDisplayDiv();
         loadSettingsButton();
-        loadTableData();
-    }
-
-    getPlanTimes(getBigTableLink());
-    console.log(planTimes);
-
-    // calls the big table data and filters for the plan times of the specific fc
-    function getPlanTimes(link) {
-        const activeData = new Promise(function(resolve) {
-            GM.xmlHttpRequest({
-                method: 'GET',
-                url: link,
-                onreadystatechange: function(response) {
-                    if (response.readyState == 4 && response.status == 200) {
-                        resolve(this.response);
-                    } 
-                }
-            })
-        }).then((data) => getFcPlanTimes(data, fc));
-    }
-
-    // plan times are added to the global planTimes array
-    function getFcPlanTimes(data, fc) {
-        const allPlans = JSON.parse(data);
-        for (const plan of allPlans) {
-            if (plan.fc === fc) {
-                planTimes.push(plan.sent_timestamp_latest);
-            }
+        // only load table data if it is not full shift i.e. if the difference between start and end hours is less than 7
+        if (Math.abs(document.getElementById('startHourIntraday').value - document.getElementById('endHourIntraday').value) < 7) {
+            loadTableData();
         }
     }
-
-    // returns the link to call the big table api, which uses 20 hours ago from the current time 
-    function getBigTableLink() {
-        const startDate = new Date();
-        startDate.setHours(startDate.getHours() - 20);
-
-        const year = startDate.getFullYear();
-        const month = parseInt(startDate.getMonth()) + 1 < 10 ? `0${parseInt(startDate.getMonth()) + 1}` : parseInt(startDate.getMonth()) + 1;
-        const day = startDate.getDate() < 10 ? `0${startDate.getDate()}` : startDate.getDate();
-        const hour = startDate.getHours() < 10 ? `0${startDate.getHours()}` : startDate.getHours();
-
-        console.log(`used: ${year}-${month}-${day} and ${hour}:00:00`);
-
-        return `https://ecft.fulfillment.a2z.com/api/NA/nssp/get_nssp_big_table_new?fcSelected=ABE4%2CACY2%2CAKR1%2CAMA1%2CCHA2%2CCHO1%2CDEN8%2CFAT2%2CFOE1%2CFTW5%2CGEG2%2CHOU8%2CHSV1%2CICT2%2CIGQ2%2CILG1%2CIND2%2CLAS6%2CLFT1%2CLGB6%2CLIT2%2CMCE1%2CMCO2%2CMDT4%2CMDW6%2CMDW9%2COKC2%2CPDX7%2CPHL6%2CPHX5%2CPHX7%2CSAT4%2CSCK1%2CSJC7%2CSLC2%2CSMF6%2CSTL3%2CSTL4%2CSWF1%2CTEB4%2CTPA3%2CYEG1&region=NA&startDate=${year}-${month}-${day}&startTime=${hour}%3A00%3A00`
-    }
-
 
     /****************\
     |DOM manipulation|
@@ -165,7 +138,6 @@
             let endTime;
             // must iterate backwards to find endtime
             for (let i = 5; i > 0; i--) {
-                console.log(getUserTimes());
                 if (getUserTimes()[`end${i}`]) {
                     endTime = getUserTimes()[`end${i}`];
                     break;
@@ -179,8 +151,6 @@
             document.getElementById('startMinuteIntraday').selectedIndex = getSelectIndexMinute(startMinute);
             document.getElementById('endHourIntraday').selectedIndex = endHour;
             document.getElementById('endMinuteIntraday').selectedIndex = getSelectIndexMinute(endMinute);
-            console.log(endTime.split(':')[0]);
-            console.log(endTime.split(':')[1]);
         })
 
         timeButtonTray.appendChild(fullShiftButton);
@@ -322,8 +292,6 @@
                 const startMinute = getUserTimes()[`start${i}`].split(':')[1];
                 const endHour = getUserTimes()[`end${i}`].split(':')[0];
                 const endMinute = getUserTimes()[`end${i}`].split(':')[1];
-                console.log(getUserTimes()[`start${i}`]);
-                console.log(getUserTimes()[`end${i}`]);
                 document.getElementById('startHourIntraday').selectedIndex = startHour;
                 document.getElementById('startMinuteIntraday').selectedIndex = getSelectIndexMinute(startMinute);
                 document.getElementById('endHourIntraday').selectedIndex = endHour;
@@ -392,6 +360,108 @@
         }
     }
 
+    function makeHeaderTd(str) {
+        const td = document.createElement('td');
+        td.textContent = str;
+        td.style.cssText += `
+            padding: 2px 12px;
+            font-size: 16px;
+            font-weight: bold;
+            line-height: 20px;
+        `
+
+        return td;
+    }
+
+    function makeTd(data) {
+        const td = document.createElement('td');
+        td.textContent = data;
+        td.style.cssText += `
+            border: 1px solid black;
+            padding: 2px 12px;
+            font-size: 16px;
+        `
+
+        return td;
+    }
+
+    // make red if delta is -10% to planned
+    function makeDeltaTd(planned, actual) {
+        const delta = actual - planned;
+        const diff = planned * -.10;
+        const td = document.createElement('td');
+        td.textContent = delta.toFixed(2);
+        td.style.cssText += `
+            border: 1px solid black;
+            padding: 2px 12px;
+            font-size: 16px;
+            background-color: ${delta <= diff ? 'rgb(248, 113, 113)' : 'none'};
+        `
+
+        return td;
+    }
+
+    function makeHcRow(pathName, processPath) {
+        const row = document.createElement('tr');
+
+        const ppTd = makeTd(pathName);
+        ppTd.style.cssText += `padding-left: 0.3rem; padding-right: 0.5rem; text-align: left;`
+        row.appendChild(ppTd);
+
+        row.appendChild(makeTd(processPath.planned_hc));
+        plannedPickerTotal += processPath.planned_hc;
+        const actualHc = parseFloat(parseFloat(processPath.actual_hc) / getTimeDiff().toFixed(2));
+        row.appendChild(makeTd(actualHc.toFixed(2)));
+        actualPickerTotal += actualHc;
+        row.appendChild(makeDeltaTd(processPath.planned_hc, actualHc));
+        pickDeltaTotal += actualHc - processPath.planned_hc;
+
+        return row;
+    }
+
+    function makeRateRow(pathName, processPath) {
+        const row = document.createElement('tr');
+        row.appendChild(makeTd(pathName));
+        row.appendChild(makeTd(processPath.planned_rate));
+        row.appendChild(makeTd(processPath.actual_rate));
+        row.appendChild(makeDeltaTd(processPath.planned_rate, processPath.actual_rate));
+
+        return row;
+    }
+
+    function makeCapacityRow(pathName, processPath) {
+        const row = document.createElement('tr');
+        row.appendChild(makeTd(pathName));
+        const plannedCapacity = processPath.planned_rate * processPath.planned_hc * getTimeDiff();
+        plannedCapacityTotal += plannedCapacity;
+        row.appendChild(makeTd(plannedCapacity.toFixed(2)));
+
+        const actualCapacity = processPath.actual_rate * processPath.actual_hc;
+        actualCapacityTotal += actualCapacity;
+        row.appendChild(makeTd(actualCapacity.toFixed(2)));
+
+        const capacityDelta = actualCapacity - plannedCapacity;
+        capacityDeltaTotal += capacityDelta;
+        row.appendChild(makeDeltaTd(plannedCapacity, actualCapacity));
+
+        return row;
+    }
+
+    function makeTotalRow(planned, actual, delta) {
+        const row = document.createElement('tr');
+        row.style.cssText += `border-top: 3px solid black;`
+
+        const totalTd = makeTd('Total');
+        totalTd.style.cssText += `padding-left: 0.3rem; padding-right: 0.5rem; text-align: left;`
+        row.appendChild(totalTd);
+
+        row.appendChild(makeTd(planned.toFixed(2)));
+        row.appendChild(makeTd(actual.toFixed(2)));
+        row.appendChild(makeTd(delta.toFixed(2)));
+
+        return row;
+    }
+
     /*****************\
     |DOM element logic|
     \*****************/
@@ -432,7 +502,9 @@
         const settingsDiv = document.getElementById('schedule-settings-button');
         settingsDiv.remove();
         loadSettingsButton();
-        loadTableData();
+        if (Math.abs(document.getElementById('startHourIntraday').value - document.getElementById('endHourIntraday').value) < 7) {
+            loadTableData();
+        }
     }   
 
     // save the inputs into local storage with the fc as the key
@@ -451,8 +523,6 @@
             start5: inputs[8].value,
             end5: inputs[9].value 
         }
-
-        console.log(timeObject);
 
         // put the object into storage
         localStorage.setItem(`${fc}`, JSON.stringify(timeObject));
@@ -503,16 +573,318 @@
     /****************\
     |table data logic|
     \****************/
-    function loadTableData() {
+    async function loadTableData() {
+        const planTime = await getPlanTime();
         const process = document.getElementById('select2-processSelector-container').textContent;
-        if (process.includes('Pick')) {
-            console.log('load pick table');
-        } else if (process.includes('Pack')) {
-            console.log('load pack table');
-        } else if (process.includes('Rebin')) {
-            console.log('load rebin table');
+        if (process.includes('100008')) {
+            loadPickTable(planTime);
+        } else if (process.includes('100054')) {
+            loadPackTable(planTime);
+        } else if (process.includes('100053')) {
+            loadRebinTable(planTime);
         }
     }
+
+    async function loadPickTable(planTime) {
+        // if undefined make a table that allows manual inputs for calculation
+        if (!planTime) {
+            makeManualPickTable();
+        } else {
+            const pickData = await makePickDataObject(planTime);
+            console.log(pickData);
+            const parent = document.getElementsByClassName('row')[0];
+
+            const div = document.createElement('div');
+            div.setAttribute('id', 'pick-table');
+            div.style.cssText += `display: flex; gap: 5rem; margin-top: 16px;`
+            
+            const pickHcTable = makePickHcTable(pickData);
+            div.appendChild(pickHcTable);
+            const pickRateTable = makePickRateTable(pickData);
+            div.appendChild(pickRateTable);
+            const pickCapacityTable = makePickCapacityTable(pickData);
+            div.appendChild(pickCapacityTable);
+
+            parent.prepend(div);
+        }
+    }
+
+    function loadPackTable(planTime) {
+        // if undefined make a table that allows manual inputs for calculation
+        if (!planTime) {
+            makeManualPackTable();
+        } else {
+
+        }
+    }
+
+    function loadRebinTable(planTime) {
+        // if undefined make a table that allows manual inputs for calculation
+        if (!planTime) {
+            makeManualPickTable();
+        } else {
+
+        }
+    }
+
+    /***************\
+    |ppa table logic|
+    \***************/
+
+    function makePickHcTable(pickData) {
+        const pickHcTable = document.createElement('table');
+        pickHcTable.style.cssText += `text-align: center; border-collapse: collapse;`
+
+        const categoriesRow = document.createElement('tr');
+        categoriesRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #3b82f6;
+            border-left: 1px solid black;
+            border-right: 1px solid black;
+        `
+
+        const td1 = makeHeaderTd('Process Path');
+        categoriesRow.appendChild(td1);
+        const td2 = makeHeaderTd('Planned Pickers');
+        categoriesRow.appendChild(td2);
+        const td3 = makeHeaderTd('Actual Pickers');
+        categoriesRow.appendChild(td3);
+        const td4 = makeHeaderTd('Delta');
+        categoriesRow.appendChild(td4);
+        pickHcTable.appendChild(categoriesRow);
+
+        for (const processPath in pickData) {
+            if (pickData[`${processPath}`].planned_hc) {
+                pickHcTable.appendChild(makeHcRow(processPath, pickData[`${processPath}`])); // only make table if there was a planned picker otherwise skip
+            } 
+        }
+        pickHcTable.appendChild(makeTotalRow(plannedPickerTotal, actualPickerTotal, pickDeltaTotal));
+
+        return pickHcTable;
+    }
+
+    function makePickRateTable(pickData) {
+        const pickRateTable = document.createElement('table');
+
+        const categoriesRow = document.createElement('tr');
+        categoriesRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #3b82f6;
+            border-left: 1px solid black;
+            border-right: 1px solid black;
+        `
+
+        const td1 = makeHeaderTd('Process Path');
+        categoriesRow.appendChild(td1);
+        const td2 = makeHeaderTd('Planned Rate');
+        categoriesRow.appendChild(td2);
+        const td3 = makeHeaderTd('Actual Rate');
+        categoriesRow.appendChild(td3);
+        const td4 = makeHeaderTd('Delta');
+        categoriesRow.appendChild(td4);
+        pickRateTable.appendChild(categoriesRow);
+
+        for (const processPath in pickData) {
+            if (pickData[`${processPath}`].planned_hc) {
+                pickRateTable.appendChild(makeRateRow(processPath, pickData[`${processPath}`])); // only make table if there was a planned picker otherwise skip
+            } 
+        }
+        const blankRow = document.createElement('tr');
+        pickRateTable.appendChild(makeTotalRow(0, 0, 0));
+
+        return pickRateTable;
+    }
+
+    function makePickCapacityTable(pickData) {
+        const pickCapacityTable = document.createElement('table');
+
+        const categoriesRow = document.createElement('tr');
+        categoriesRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #3b82f6;
+            border-left: 1px solid black;
+            border-right: 1px solid black;
+        `
+
+        const td1 = makeHeaderTd('Process Path');
+        categoriesRow.appendChild(td1);
+        const td2 = makeHeaderTd('Planned Capacity');
+        categoriesRow.appendChild(td2);
+        const td3 = makeHeaderTd('Actual Capacity');
+        categoriesRow.appendChild(td3);
+        const td4 = makeHeaderTd('Delta');
+        categoriesRow.appendChild(td4);
+        pickCapacityTable.appendChild(categoriesRow);
+
+        for (const processPath in pickData) {
+            if (pickData[`${processPath}`].planned_hc) {
+                pickCapacityTable.appendChild(makeCapacityRow(processPath, pickData[`${processPath}`])); // only make table if there was a planned picker otherwise skip
+            } 
+        }
+        pickCapacityTable.appendChild(makeTotalRow(plannedCapacityTotal, actualCapacityTotal, capacityDeltaTotal));
+
+        return pickCapacityTable;
+    }
+
+    
+    /**************\
+    |plan API logic|
+    \**************/
+    // return the time of the plan most relevant to time period selected which will be the plan with time closest to start time of that quarter/period
+    async function getPlanTime() {
+        const allPlans = await getPlanTimes();
+        const allPlansData = JSON.parse(allPlans);
+        const planTimes = getFcPlanTimes(allPlansData);
+
+        const startDateString = document.getElementById('startDateIntraday').value;
+        const startHour = document.getElementById('startHourIntraday').value;
+        const startMinute = document.getElementById('startMinuteIntraday').value;
+        const startDate = new Date(startDateString.split('/')[0], startDateString.split('/')[1] - 1, startDateString.split('/')[2], startHour, startMinute);
+
+        // only accept plans less than 70 minutes from start of the period/quarter
+        let closestPlanTime = 70;
+        let closestPlan;
+        for (const planTime of planTimes) {
+            const date = planTime.split('T')[0];
+            const year = date.split('-')[0];
+            const month = date.split('-')[1] - 1;
+            const day = date.split('-')[2];
+            const time = planTime.split('T')[1];
+            const hour = time.split(':')[0];
+            const minute = time.split(':')[1];
+            const planDate = new Date(year, month, day, hour, minute);
+            const difference = Math.abs(planDate - startDate) / 60000;
+            if (difference < closestPlanTime) {
+                closestPlanTime = difference;
+                closestPlan = planTime;
+            }
+            
+        }
+
+        console.log(`closest plan is ${closestPlan}`);
+
+        return closestPlan;
+    }
+
+
+    // calls the big table data and filters for the plan times of the specific fc
+    function getPlanTimes() {
+        return new Promise(function(resolve) {
+            GM.xmlHttpRequest({
+                method: 'GET',
+                url: getBigTableLink(),
+                onreadystatechange: function(response) {
+                    if (response.readyState == 4 && response.status == 200) {
+                        resolve(this.response);
+                    } 
+                }
+            })
+        }).then((data) => {
+            return data
+        });
+    }
+
+    // return an array of plan times for the specific fc
+    function getFcPlanTimes(allPlansData) {
+        const planTimes = [];
+        for (const plan of allPlansData) {
+            if (plan.fc === fc) {
+                planTimes.push(plan.sent_timestamp_latest);
+            }
+        }
+
+        return planTimes;
+    }
+
+    // returns the link to call the big table api, which uses 20 hours ago from the current time 
+    function getBigTableLink() {
+        const startDate = new Date();
+        startDate.setHours(startDate.getHours() - 20);
+
+        const year = startDate.getFullYear();
+        const month = parseInt(startDate.getMonth()) + 1 < 10 ? `0${parseInt(startDate.getMonth()) + 1}` : parseInt(startDate.getMonth()) + 1;
+        const day = startDate.getDate() < 10 ? `0${startDate.getDate()}` : startDate.getDate();
+        const hour = startDate.getHours() < 10 ? `0${startDate.getHours()}` : startDate.getHours();
+
+        return `https://ecft.fulfillment.a2z.com/api/NA/nssp/get_nssp_big_table_new?fcSelected=ABE4%2CACY2%2CAKR1%2CAMA1%2CCHA2%2CCHO1%2CDEN8%2CFAT2%2CFOE1%2CFTW5%2CGEG2%2CHOU8%2CHSV1%2CICT2%2CIGQ2%2CILG1%2CIND2%2CLAS6%2CLFT1%2CLGB6%2CLIT2%2CMCE1%2CMCO2%2CMDT4%2CMDW6%2CMDW9%2COKC2%2CPDX7%2CPHL6%2CPHX5%2CPHX7%2CSAT4%2CSCK1%2CSJC7%2CSLC2%2CSMF6%2CSTL3%2CSTL4%2CSWF1%2CTEB4%2CTPA3%2CYEG1&region=NA&startDate=${year}-${month}-${day}&startTime=${hour}%3A00%3A00`
+    }
+
+    function getPickData(planTime) {
+        return new Promise(function(resolve) {
+            GM.xmlHttpRequest({
+                method: 'GET',
+                url: `https://ecft.fulfillment.a2z.com/api/NA/nssp/get_nssp_pp_extended?fc=${fc}&senttimestamp=${planTime}&region=NA`,
+                onreadystatechange: function(response) {
+                    if (response.readyState == 4 && response.status == 200) {
+                        resolve(this.response);
+                    } 
+                }
+            })
+        }).then((data) => {
+            return data
+        });
+    }
+
+    // returns an object with all planned pick data from API and all actual pick data from PPA pick table
+    async function makePickDataObject(planTime) {
+        const pickData = await getPickData(planTime);
+        const parsedPickData = JSON.parse(pickData);
+        const allPickData = {};
+        for (let i = 0; i < parsedPickData.length; i++) {
+            const processPath = parsedPickData[i].pp_name;
+            const actualsData = getPickPpaInfo(processPath);
+            allPickData[`${processPath}`] = {};
+
+            allPickData[`${processPath}`]['planned_hc'] = parsedPickData[i].planned_hc_hr;
+            allPickData[`${processPath}`]['actual_hc'] = actualsData ? actualsData[5].textContent : null;
+
+            allPickData[`${processPath}`]['planned_rate'] = parseFloat(parsedPickData[i].rate_pick.toFixed(1));
+            allPickData[`${processPath}`]['actual_rate'] = actualsData ? actualsData[7].textContent : null;
+
+            allPickData[`${processPath}`]['planned_quantity_hr'] = Math.round(parsedPickData[i].planned_hc_hr * parsedPickData[i].rate_pick);
+            allPickData[`${processPath}`]['actual_quantity'] = actualsData ? actualsData[2].textContent : null;
+        }
+
+        return allPickData;
+    }
+
+    // returns the row of the appropriate process path. if not found in table, return null
+    function getPickPpaInfo(processPath) {
+        const pickRows = Array.from(document.querySelectorAll('tbody')[1].querySelectorAll('tr'));
+        for (const row of pickRows) {
+            if (row.querySelectorAll('td')[0].textContent.toLowerCase() === processPath.toLowerCase()) {
+                return Array.from(row.querySelectorAll('td'));
+            } 
+        }
+
+        return null;
+    }
+
+    // return time period in hours
+    function getTimeDiff() {
+        const endHour = document.getElementById('endHourIntraday').value;
+        const endMinute = fractionalizeMinute(document.getElementById('endMinuteIntraday').value);
+        const end = parseFloat(endHour) + parseFloat(endMinute);
+
+        const startHour = document.getElementById('startHourIntraday').value;
+        const startMinute = fractionalizeMinute(document.getElementById('startMinuteIntraday').value);
+        const start = parseFloat(startHour) + parseFloat(startMinute);
+
+        return end - start;
+    }
+
+    function fractionalizeMinute(minute) {
+        switch (minute) {
+            case '15': return .25;
+            case '30': return .5;
+            case '45': return .75;
+            default: return 0;
+        }
+    }
+
 })(); 
 
 
