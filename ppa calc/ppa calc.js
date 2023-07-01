@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      0.4
+// @version      0.5.1
 // @description  Pull planned hcs/rates and compare against ppa
 // @author       mooshahe
 // @match        https://fclm-portal.amazon.com/ppa/inspect/*
@@ -406,6 +406,24 @@
         return td;
     }
 
+    function makeInputTd(id) {
+        const td = document.createElement('td');
+        td.style.cssText += `
+            border: 1px solid black; background-color: yellow;
+        `
+        const input = document.createElement('input');
+        input.setAttribute('id', `${id}-input`);
+        input.style.cssText += `
+            font-size: 16px;
+            height: 2.3rem;
+            width: 7rem;
+            text-align: center;
+        `
+        td.appendChild(input);
+    
+        return td;
+    }
+
     function makeHcRow(pathName, processPath) {
         const row = document.createElement('tr');
         row.style.backgroundColor = rowCount % 2 === 0 ? 'white' : '#e5e7eb';
@@ -479,6 +497,68 @@
         row.appendChild(makeTd(delta.toFixed(1)));
 
         return row;
+    }
+
+    function makeRebinHcRow(data) {
+        const row = document.createElement('tr');
+
+        row.appendChild(makeTd(data.planned_hc));
+        const actualHc = parseFloat(parseFloat(data.actual_hc) / getTimeDiff());
+        row.appendChild(makeTd(actualHc.toFixed(1)));
+        row.appendChild(makeDeltaTd(data.planned_hc, actualHc));
+
+        return row;
+    }
+
+    function makeRebinRateRow(data) {
+        const row = document.createElement('tr');
+
+        if (data.planned_rate) {
+            row.appendChild(makeTd(data.planned_rate));
+        } else {
+            row.appendChild(makeInputTd('planned-rate'));
+        }
+        
+        row.appendChild(makeTd(data.actual_rate));
+
+        if (data.planned_rate) {
+            row.appendChild(makeDeltaTd(data.planned_rate, data.actual_rate));
+        } else {
+            row.appendChild(makeTd('N/A'));
+        }
+        
+        return row;
+    }
+
+    function makeRebinCapacityRow(data) {
+        const row = document.createElement('tr');
+
+        let plannedQuantity = 0;
+        if (data.planned_rate) {
+            plannedQuantity = data.planned_rate * data.planned_hc * getTimeDiff();
+            row.appendChild(makeTd(plannedQuantity));
+        } else {
+            row.appendChild(makeTd('N/A'));
+        }
+        
+        row.appendChild(makeTd(data.actual_quantity));
+
+        if (data.planned_rate) {
+            row.appendChild(makeDeltaTd(plannedQuantity, data.actual_quantity));
+        } else {
+            row.appendChild(makeTd('N/A'));
+        }
+        
+        return row;
+    }
+
+    function makeCalculateButton() {
+        const button = document.createElement('button');
+        button.setAttribute('id', 'calculate-btn');
+        button.textContent = 'Calculate';
+        button.style.cssText += `font-size: 16px; width: 10rem; margin-top: 2rem; border: none; align-self: center;`;
+
+        return button;
     }
 
     /*****************\
@@ -675,13 +755,56 @@
         }
     }
 
-    function loadRebinTable(planTime) {
+    async function loadRebinTable(planTime) {
         // if undefined make a table that allows manual inputs for calculation
         if (!planTime) {
-            makeManualPickTable();
+            makeManualRebinTable();
         } else {
+            const rebinData = await makeRebinDataObject(planTime);
+            console.log(rebinData);
+            const parent = document.getElementsByClassName('row')[0];
 
+            const div = document.createElement('div');
+            div.setAttribute('id', 'main-div');
+            div.style.cssText += `display: flex; flex-direction: column; margin-top: 4rem`;
+
+            const p = document.createElement('p');
+            const date = planTime.split('T')[0];
+            const time = planTime.split('T')[1].replace('Z', '');
+            p.textContent = `Data pulled from plan uploaded at ${time}, ${date}`;
+            p.style.cssText += `font-size: 16px; align-self: center;`;
+            div.appendChild(p);
+            
+            
+            div.appendChild(makeRebinTable(rebinData));
+
+            const calculateBtn = makeCalculateButton();
+            div.appendChild(calculateBtn);
+            calculateBtn.addEventListener('click', () => {
+                if (document.getElementById('planned-rate-input')) {
+                    rebinData.planned_rate = document.getElementById('planned-rate-input').value;
+                }
+                document.getElementById('table-div').remove();
+                document.getElementById('calculate-btn').remove();
+                div.appendChild(makeRebinTable(rebinData));
+            });
+
+            parent.prepend(div);
         }
+    }
+
+    function makeRebinTable(rebinData) {
+        const tableDiv = document.createElement('div');
+        tableDiv.setAttribute('id', 'table-div');
+        tableDiv.style.cssText += `display: flex; align-self: center; gap: 5rem; margin-top: 16px;`;
+        const rebinHcTable = makeRebinHcTable(rebinData);
+        tableDiv.appendChild(rebinHcTable);
+        const rebinRateTable = makeRebinRateTable(rebinData);
+        tableDiv.appendChild(rebinRateTable);
+        const rebinCapacityTable = makeRebinCapacityTable(rebinData);
+        tableDiv.appendChild(rebinCapacityTable);
+
+        return tableDiv;
     }
 
     /***************\
@@ -841,6 +964,131 @@
         return capacityTable;
     }
 
+    function makeRebinHcTable(data) {
+        const hcTable = document.createElement('table');
+        hcTable.style.cssText += `text-align: center; border-collapse: collapse;`
+
+        const titleRow = document.createElement('tr');
+        titleRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #3b82f6;
+            border: 1px solid black;
+            border-bottom: none;
+        `
+
+        const titleHeader = document.createElement('td');
+        titleHeader.textContent = 'Headcounts';
+        titleHeader.style.cssText += `text-align: center; font-size: 1.6rem; font-weight: bold;`;
+        titleHeader.colSpan = '3';
+        titleRow.appendChild(titleHeader);
+        hcTable.appendChild(titleRow);
+
+        const categoriesRow = document.createElement('tr');
+        categoriesRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #3b82f6;
+            border-left: 1px solid black;
+            border-right: 1px solid black;
+        `
+
+        const td1 = makeHeaderTd('Planned');
+        categoriesRow.appendChild(td1);
+        const td2 = makeHeaderTd('Actual');
+        categoriesRow.appendChild(td2);
+        const td3 = makeHeaderTd('Delta');
+        categoriesRow.appendChild(td3);
+        hcTable.appendChild(categoriesRow);
+
+        hcTable.appendChild(makeRebinHcRow(data)); 
+
+        return hcTable;
+    }
+
+    function makeRebinRateTable(data) {
+        const rateTable = document.createElement('table');
+        rateTable.style.cssText += `text-align: center; border-collapse: collapse;`
+
+        const titleRow = document.createElement('tr');
+        titleRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #3b82f6;
+            border: 1px solid black;
+            border-bottom: none;
+        `
+
+        const titleHeader = document.createElement('td');
+        titleHeader.textContent = 'Rates';
+        titleHeader.style.cssText += `text-align: center; font-size: 1.6rem; font-weight: bold;`;
+        titleHeader.colSpan = '3';
+        titleRow.appendChild(titleHeader);
+        rateTable.appendChild(titleRow);
+
+        const categoriesRow = document.createElement('tr');
+        categoriesRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #3b82f6;
+            border-left: 1px solid black;
+            border-right: 1px solid black;
+        `
+
+        const td1 = makeHeaderTd('Planned');
+        categoriesRow.appendChild(td1);
+        const td2 = makeHeaderTd('Actual');
+        categoriesRow.appendChild(td2);
+        const td3 = makeHeaderTd('Delta');
+        categoriesRow.appendChild(td3);
+        rateTable.appendChild(categoriesRow);
+
+        rateTable.appendChild(makeRebinRateRow(data)); 
+
+        return rateTable;
+    }
+
+    function makeRebinCapacityTable(data) {
+        const capacityTable = document.createElement('table');
+        capacityTable.style.cssText += `text-align: center; border-collapse: collapse;`
+
+        const titleRow = document.createElement('tr');
+        titleRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #3b82f6;
+            border: 1px solid black;
+            border-bottom: none;
+        `
+
+        const titleHeader = document.createElement('td');
+        titleHeader.textContent = 'Capacity';
+        titleHeader.style.cssText += `text-align: center; font-size: 1.6rem; font-weight: bold;`;
+        titleHeader.colSpan = '3';
+        titleRow.appendChild(titleHeader);
+        capacityTable.appendChild(titleRow);
+
+        const categoriesRow = document.createElement('tr');
+        categoriesRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #3b82f6;
+            border-left: 1px solid black;
+            border-right: 1px solid black;
+        `
+
+        const td1 = makeHeaderTd('Planned');
+        categoriesRow.appendChild(td1);
+        const td2 = makeHeaderTd('Actual');
+        categoriesRow.appendChild(td2);
+        const td3 = makeHeaderTd('Delta');
+        categoriesRow.appendChild(td3);
+        capacityTable.appendChild(categoriesRow);
+
+        capacityTable.appendChild(makeRebinCapacityRow(data)); 
+
+        return capacityTable;
+    }
     
     /**************\
     |plan API logic|
@@ -940,22 +1188,6 @@
         });
     }
 
-    function getPackData(planTime) {
-        return new Promise(function(resolve) {
-            GM.xmlHttpRequest({
-                method: 'GET',
-                url: `https://ecft.fulfillment.a2z.com/api/NA/nssp/get_nssp_pg_extended?fc=${fc}&senttimestamp=${planTime}&region=NA`,
-                onreadystatechange: function(response) {
-                    if (response.readyState == 4 && response.status == 200) {
-                        resolve(this.response);
-                    } 
-                }
-            })
-        }).then((data) => {
-            return data
-        });
-    }
-
     // returns an object with all planned pick data from API and all actual pick data from PPA pick table
     async function makePickDataObject(planTime) {
         const pickData = await getPickData(planTime);
@@ -990,7 +1222,7 @@
             const actualsData = getProcessPathInfo(processPath);
             allPackData[`${processPath}`] = {};
 
-            allPackData[`${processPath}`]['planned_hc'] = parsedPackData[i].hc_pack;
+            allPackData[`${processPath}`]['planned_hc'] = parseFloat(parsedPackData[i].hc_pack.toFixed(1));
             allPackData[`${processPath}`]['actual_hc'] = actualsData ? actualsData[5].textContent : 0;
 
             allPackData[`${processPath}`]['planned_rate'] = parseFloat(parsedPackData[i].rate_pack.toFixed(1));
@@ -1003,6 +1235,26 @@
         return allPackData;
     }
 
+    // only rebin data in api is hc
+    async function makeRebinDataObject(planTime) {
+        const pickData = await getPickData(planTime);
+        const parsedRebinData = JSON.parse(pickData);
+        const allRebinData = {};
+        allRebinData['planned_hc'] = 0;
+        for (let i = 0; i < parsedRebinData.length; i++) {
+            const processPath = parsedRebinData[i].pp_name;
+            if (processPath.includes('Multi')) {
+                allRebinData['planned_hc'] += parsedRebinData[i].hc_rebin;
+            }
+            const actualsData = getRebinTotals();
+            allRebinData['actual_hc'] = actualsData ? actualsData[5].textContent : 0;
+            allRebinData['actual_rate'] = actualsData ? actualsData[7].textContent : 0;
+            allRebinData['actual_quantity'] = actualsData ? actualsData[2].textContent : 0;
+        }
+
+        return allRebinData;
+    }
+
     // returns the row of the appropriate process path. if not found in table, return null
     function getProcessPathInfo(processPath) {
         const ppRows = Array.from(document.querySelectorAll('tbody')[1].querySelectorAll('tr'));
@@ -1013,6 +1265,10 @@
         }
 
         return null;
+    }
+
+    function getRebinTotals() {
+        return Array.from(document.querySelectorAll('tfoot')[0].querySelector('tr').querySelectorAll('td'));
     }
 
     // return time period in hours
