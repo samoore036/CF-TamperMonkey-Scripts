@@ -46,9 +46,16 @@
         // only load table data if it's not already loaded in
         if (document.getElementById('table-div')) {
             return;
-            // only load table data if it is not full shift i.e. if the difference between start and end hours is less than 7
-        } else if (Math.abs(document.getElementById('startHourIntraday').value - document.getElementById('endHourIntraday').value) < 7) {
-            loadTableData();
+            // only load table data if it is not full shift. must account for dayshift and nightshift time differences between quarters/periods as nights crosses over a day
+            // first check if it's day shift. if so, difference between start and end hour should be less than 9
+        } else if (document.getElementById('startDateIntraday').value === document.getElementById('endDateIntraday').value) {
+            if (Math.abs(document.getElementById('startHourIntraday').value - document.getElementById('endHourIntraday').value < 9)) {
+                loadTableData();
+            }
+        } else { //accounts for night shift if the start date and end date are different. in this case shift length should be greater than 15
+            if (document.getElementById('startHourIntraday').value - document.getElementById('endHourIntraday').value > 15) {
+                loadTableData();
+            }
         }
     }
 
@@ -674,6 +681,7 @@
     \****************/
 
     async function loadTableData() {
+        console.log('in loadTableData');
         const planTime = await getPlanTime();
         const process = document.getElementById('select2-processSelector-container').textContent;
         if (process.includes('100008')) {
@@ -1095,6 +1103,7 @@
     \**************/
     // return the time of the plan most relevant to time period selected which will be the plan with time closest to start time of that quarter/period
     async function getPlanTime() {
+        console.log('in getplantime')
         const allPlans = await getPlanTimes();
         const allPlansData = JSON.parse(allPlans);
         const planTimes = getFcPlanTimes(allPlansData);
@@ -1132,6 +1141,7 @@
 
     // calls the big table data and filters for the plan times of the specific fc
     function getPlanTimes() {
+        console.log('getting plan times');
         return new Promise(function(resolve) {
             GM.xmlHttpRequest({
                 method: 'GET',
@@ -1274,14 +1284,19 @@
     // return time period in hours
     function getTimeDiff() {
         const endHour = document.getElementById('endHourIntraday').value;
-        const endMinute = fractionalizeMinute(document.getElementById('endMinuteIntraday').value);
-        const end = parseFloat(endHour) + parseFloat(endMinute);
-
         const startHour = document.getElementById('startHourIntraday').value;
+        const endMinute = fractionalizeMinute(document.getElementById('endMinuteIntraday').value);
         const startMinute = fractionalizeMinute(document.getElementById('startMinuteIntraday').value);
-        const start = parseFloat(startHour) + parseFloat(startMinute);
-
-        return end - start;
+        
+        if (endHour > startHour) { // for times not crossing over midnight
+            const end = parseFloat(endHour) + parseFloat(endMinute);
+            const start = parseFloat(startHour) + parseFloat(startMinute);
+            return end - start;
+        } else {
+            const end = parseFloat(endHour) + parseFloat(endMinute);
+            const start = parseFloat(startHour) + parseFloat(startMinute);
+            return Math.abs(end - start + 24);
+        }
     }
 
     function fractionalizeMinute(minute) {
