@@ -1074,7 +1074,7 @@ function loadScript(data) {
             font-size: 1.2rem;
             color: white;
             background-color: #3b82f6;
-            border: 1px solid black;
+            border: 1px solid black;+
             border-bottom: none;
         `
 

@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      0.6
+// @version      1.2
 // @description  Pull planned hcs/rates and compare against ppa
 // @author       mooshahe
 // @match        https://fclm-portal.amazon.com/ppa/inspect/*
@@ -50,11 +50,12 @@
             // only load table data if it is not full shift. must account for dayshift and nightshift time differences between quarters/periods as nights crosses over a day
             // first check if it's day shift. if so, difference between start and end hour should be less than 9
         } else if (document.getElementById('startDateIntraday').value === document.getElementById('endDateIntraday').value) {
-            if (Math.abs(document.getElementById('startHourIntraday').value - document.getElementById('endHourIntraday').value < 9)) {
+            console.log('the days are equal');
+            if ((Math.abs(document.getElementById('startHourIntraday').value - document.getElementById('endHourIntraday').value) < 9)) {
                 loadTableData();
             }
         } else { //accounts for night shift if the start date and end date are different. in this case shift length should be greater than 15
-            if (document.getElementById('startHourIntraday').value - document.getElementById('endHourIntraday').value > 15) {
+            if ((document.getElementById('startHourIntraday').value - document.getElementById('endHourIntraday').value) > 15) {
                 loadTableData();
             }
         }
@@ -65,19 +66,33 @@
     \****************/
 
     function setupDom() {
-        document.body.appendChild(makeModal());
+        const overlay = makeOverlay();
+        overlay.appendChild(makeModal());
+        document.body.appendChild(overlay);
+    }
+
+    function makeOverlay() {
+        const overlay = document.createElement('div');
+        overlay.setAttribute('id', 'overlay');
+        overlay.style.display = 'none';
+
+        return overlay;
     }
 
     function makeModal() {
         const modal = document.createElement('div');
         modal.setAttribute('id', 'modal');
-        // modal.style.display = 'none';
-        modal.appendChild(makeCloseSettingsBtn());
+        modal.style.cssText += `background-color: white; color: black; padding: 3rem; font-size: 1.4rem; max-height: 100vh; overflow-y: auto;`;
         
         const prompt = document.createElement('p');
         prompt.textContent = `Please enter period/quarter start/end times`;
-        prompt.style.cssText+= 'font-size: 1.7rem; text-align: center;';
+        prompt.style.cssText+= 'font-size: 1.4rem; text-align: center;';
         modal.appendChild(prompt);
+
+        const advisory = document.createElement('p');
+        advisory.textContent = `Times should be in 24hr format i.e. 07:30, 15:30, 00:30, 03:45`;
+        advisory.style.cssText+= 'font-size: 1.2rem; text-align: center;';
+        modal.appendChild(advisory); 
 
         const timeDiv = document.createElement('div');
         timeDiv.setAttribute('id', 'modal-input-div');
@@ -86,7 +101,11 @@
             timeDiv.appendChild(makeTimeInputDiv(i));
         }
         modal.appendChild(timeDiv);
-    
+        
+        const buttonDiv = document.createElement('div');
+        buttonDiv.style.cssText += `display: flex; gap: 2rem; align-self: center;`;
+
+
         const saveButton = document.createElement('button');
         saveButton.textContent = 'Save';
         saveButton.style.cssText += `
@@ -94,25 +113,20 @@
             color: black; background-color: white; font-size: 1.5rem;
         `
         saveButton.addEventListener('click', saveModalSettings);
-        timeDiv.appendChild(saveButton);
+        buttonDiv.appendChild(saveButton);
+
+        const exitButton = document.createElement('button');
+        exitButton.textContent = 'Exit';
+        exitButton.style.cssText += `
+            align-self: center; width: 15rem; margin-top: 1rem;
+            color: black; background-color: rgb(220, 38, 38); font-size: 1.5rem;
+        `
+        exitButton.addEventListener('click', closeModal);
+        buttonDiv.appendChild(exitButton);
+
+        timeDiv.appendChild(buttonDiv);
 
         return modal;
-    }
-
-    function makeCloseSettingsBtn() {
-        const button = document.createElement('button');
-        button.setAttribute('id', 'close-btn');
-        button.style.cssText += `
-            position: relative; bottom: 3rem; left: 38.7rem;
-            border: medium none;
-            font-size: 1.7rem; width: 2.5rem; height: 2.5rem;
-            color: white; background-color: rgb(220, 38, 38);
-            cursor: pointer;
-        `
-        button.textContent = '✖';
-        button.addEventListener('click', closeModal);
-
-        return button;
     }
 
     function loadSubmitButtons() {
@@ -683,26 +697,22 @@
     \*****************/
 
     function openModal() {
-        const modal = document.getElementById('modal');
-        modal.style.zIndex = '1000';
-        modal.style.position = 'fixed';
-        modal.style.top = '20%';
-        modal.style.left = '35%';
-        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
-        modal.style.display = 'flex';
-        modal.style.flexDirection = 'column';
-        modal.style.justifyContent = 'center';
-        modal.style.padding = '3rem';
-        modal.style.color = 'white';
-    
-        // const slaDiv = document.getElementById('sla-div');
-        // slaDiv.remove();
+        const overlay = document.getElementById('overlay');
+        overlay.style.zIndex = '1000';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
     }
 
     function closeModal() {
-        const modal = document.getElementById('modal');
-        modal.style.display = 'none';
-
+        const overlay = document.getElementById('overlay');
+        overlay.style.display = 'none';
 
         // if on close the display div does not exist, make and attach it, otherwise update it
         if (!document.getElementById('time-display-div')) {
@@ -718,14 +728,14 @@
         const settingsDiv = document.getElementById('schedule-settings-button');
         settingsDiv.remove();
         loadSettingsButton();
-        if (Math.abs(document.getElementById('startHourIntraday').value - document.getElementById('endHourIntraday').value) < 7) {
+        if (!document.getElementById('table-div')) {
             loadTableData();
         }
     }   
 
     // save the inputs into local storage with the fc as the key
     function saveModalSettings(e) {
-        const parent = e.target.parentElement;
+        const parent = e.target.parentElement.parentElement;
         const inputs = Array.from(parent.querySelectorAll('input'));
         const timeObject = {
             start1: inputs[0].value,
