@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      1.2
+// @version      1.3
 // @description  Pull planned hcs/rates and compare against ppa
 // @author       mooshahe
 // @match        https://fclm-portal.amazon.com/ppa/inspect/*
@@ -873,8 +873,8 @@
 
             const p = document.createElement('p');
             const date = planTime.split('T')[0];
-            const time = planTime.split('T')[1].replace('Z', '');
-            p.textContent = `Data pulled from plan uploaded at ${time.split('.'[0])}, ${date}`;
+            const time = planTime.split('T')[1].replace('Z', '').split('.')[0];
+            p.textContent = `Data pulled from plan uploaded at ${time}, ${date}`;
             p.style.cssText += `font-size: 16px; align-self: center;`;
             div.appendChild(p);
             
@@ -952,7 +952,7 @@
 
             const p = document.createElement('p');
             const date = planTime.split('T')[0];
-            const time = planTime.split('T')[1].replace('Z', '');
+            const time = planTime.split('T')[1].replace('Z', '').split('.')[0];
             p.textContent = `Data pulled from plan uploaded at ${time}, ${date}`;
             p.style.cssText += `font-size: 16px; align-self: center;`;
             div.appendChild(p);
@@ -1022,7 +1022,7 @@
 
             const p = document.createElement('p');
             const date = planTime.split('T')[0];
-            const time = planTime.split('T')[1].replace('Z', '');
+            const time = planTime.split('T')[1].replace('Z', '').split('.')[0];
             p.textContent = `Data pulled from plan uploaded at ${time.split('.')[0]}, ${date}`;
             p.style.cssText += `font-size: 16px; align-self: center;`;
             div.appendChild(p);
@@ -1072,7 +1072,7 @@
         const parent = document.getElementsByClassName('row')[0];        
         const statusMessage = document.createElement('p');
         statusMessage.setAttribute('id', 'status-message');
-        statusMessage.style.cssText += `font-size: 20px; align-self: center; position: relative; left: 35%;`;
+        statusMessage.style.cssText += `font-size: 16px; align-self: center; position: relative; left: 35%;`;
         statusMessage.textContent = message;
         div.appendChild(statusMessage);
 
