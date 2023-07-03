@@ -801,7 +801,9 @@
     \****************/
 
     async function loadTableData() {
+        loadStatusMessage('Finding plan data from dashboard');
         const planTime = await getPlanTime();
+        document.getElementById('status-message').remove();
         const process = document.getElementById('select2-processSelector-container').textContent;
         if (process.includes('100008')) {
             loadPickTable(planTime);
@@ -872,7 +874,7 @@
             const p = document.createElement('p');
             const date = planTime.split('T')[0];
             const time = planTime.split('T')[1].replace('Z', '');
-            p.textContent = `Data pulled from plan uploaded at ${time}, ${date}`;
+            p.textContent = `Data pulled from plan uploaded at ${time.split('.'[0])}, ${date}`;
             p.style.cssText += `font-size: 16px; align-self: center;`;
             div.appendChild(p);
             
@@ -1062,6 +1064,19 @@
         tableDiv.appendChild(rebinCapacityTable);
 
         return tableDiv;
+    }
+
+    function loadStatusMessage(message) {
+        const div = document.createElement('div');
+        div.style.cssText += `display: flex; margin-top: 4rem;`;
+        const parent = document.getElementsByClassName('row')[0];        
+        const statusMessage = document.createElement('p');
+        statusMessage.setAttribute('id', 'status-message');
+        statusMessage.style.cssText += `font-size: 20px; align-self: center; position: relative; left: 35%;`;
+        statusMessage.textContent = message;
+        div.appendChild(statusMessage);
+
+        parent.prepend(div);
     }
 
     /***************\
@@ -1676,7 +1691,6 @@
         return closestPlan;
     }
 
-
     // calls the big table data and filters for the plan times of the specific fc
     function getPlanTimes() {
         return new Promise(function(resolve) {
@@ -1686,7 +1700,9 @@
                 onreadystatechange: function(response) {
                     if (response.readyState == 4 && response.status == 200) {
                         resolve(this.response);
-                    } 
+                    } else if (response.status >= 400) {
+                        loadStatusMessage('Failed to connect to dashboard. Please ensure you are authenticated in midway and try again.');
+                    }
                 }
             })
         }).then((data) => {
