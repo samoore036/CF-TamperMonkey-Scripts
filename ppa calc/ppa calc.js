@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      1.3
+// @version      1.3.1
 // @description  Pull planned hcs/rates and compare against ppa
 // @author       mooshahe
 // @match        https://fclm-portal.amazon.com/ppa/inspect/*
@@ -1666,10 +1666,10 @@
         const startMinute = document.getElementById('startMinuteIntraday').value;
         const startDate = new Date(startDateString.split('/')[0], startDateString.split('/')[1] - 1, startDateString.split('/')[2], startHour, startMinute);
 
-        // only accept plans less than 70 minutes from start of the period/quarter
-        let closestPlanTime = 70;
+        // first look for the closest plan at most 50 minutes before start time
         let closestPlan;
         for (const planTime of planTimes) {
+            let closestPlanTime = -51;
             const date = planTime.split('T')[0];
             const year = date.split('-')[0];
             const month = date.split('-')[1] - 1;
@@ -1678,18 +1678,40 @@
             const hour = time.split(':')[0];
             const minute = time.split(':')[1];
             const planDate = new Date(year, month, day, hour, minute);
-            const difference = Math.abs(planDate - startDate) / 60000;
-            if (difference < closestPlanTime) {
+            console.log(`difference for ${planTime}: ${(planDate - startDate) / 60000}`)
+            const difference = (planDate - startDate) / 60000;
+            if (difference > closestPlanTime && difference < 0) {
                 closestPlanTime = difference;
                 closestPlan = planTime;
             }
-            
+        }
+
+        // if there was no plan within 50 mins before start time, use closest plan within 30 mins after start time
+        if (!closestPlan) {
+            for (const planTime of planTimes) {
+                let closestPlanTime = 31;
+                const date = planTime.split('T')[0];
+                const year = date.split('-')[0];
+                const month = date.split('-')[1] - 1;
+                const day = date.split('-')[2];
+                const time = planTime.split('T')[1];
+                const hour = time.split(':')[0];
+                const minute = time.split(':')[1];
+                const planDate = new Date(year, month, day, hour, minute);
+                console.log(`difference for ${planTime}: ${(planDate - startDate) / 60000}`)
+                const difference = (planDate - startDate) / 60000;
+                if (difference < closestPlanTime && difference > 0) {
+                    closestPlanTime = difference;
+                    closestPlan = planTime;
+                }
+            }
         }
 
         console.log(`closest plan is ${closestPlan}`);
 
         return closestPlan;
     }
+
 
     // calls the big table data and filters for the plan times of the specific fc
     function getPlanTimes() {
@@ -1701,7 +1723,7 @@
                     if (response.readyState == 4 && response.status == 200) {
                         resolve(this.response);
                     } else if (response.status >= 400) {
-                        loadStatusMessage('Failed to connect to dashboard. Please ensure you are authenticated in midway and try again.');
+                        loadStatusMessage('Failed to connect to dashboard. Please ensure you are authenticated in midway and try reloading.');
                     }
                 }
             })
