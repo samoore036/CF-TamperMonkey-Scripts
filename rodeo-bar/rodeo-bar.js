@@ -3,7 +3,7 @@
 // @updateURL    https://raw.githubusercontent.com/samoore036/CF-TamperMonkey-Scripts/main/rodeo-bar/rodeo-bar.js
 // @downloadURL  https://raw.githubusercontent.com/samoore036/CF-TamperMonkey-Scripts/main/rodeo-bar/rodeo-bar.js
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      2.2.0
+// @version      2.2.1
 // @description  Rodeo resource bar to display metrics to increase visibility for CF leads and sites alike
 // @author       mooshahe
 // @match        https://rodeo-iad.amazon.com/*/ExSD*
@@ -32,7 +32,7 @@
             type = "TNS";
     }
 
-    const scannedThreshold = type === "ARNS" ? 1000 : 500;
+    const scannedThreshold = type === "ARNS" ? 800 : 350;
     const psThreshold = type === "ARNS" ? 100 : 50;
 
     //get rid of current text to make room for new div
