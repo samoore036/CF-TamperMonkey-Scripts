@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      1.3.3
+// @version      1.4.0
 // @description  Pull planned hcs/rates and compare against ppa
 // @author       mooshahe
 // @match        https://fclm-portal.amazon.com/ppa/inspect/*
@@ -12,7 +12,7 @@
 // ==/UserScript==
 
 
-usingChrome = navigator.userAgent.includes("Chrome") ? true : false
+const usingChrome = navigator.userAgent.includes("Chrome") ? true : false
 
 if (usingChrome) {
     /* very first thing is to check browser. if it is Chrome, do not run the script.
@@ -1741,17 +1741,15 @@ function runScript() {
         return planTimes;
     }
 
-    // returns the link to call the big table api, which uses 20 hours ago from the current time 
+    // returns the link to call the big table api, which uses 3 hours ago from the query start time
     function getBigTableLink() {
-        const startDate = new Date();
-        startDate.setHours(startDate.getHours() - 20);
-
-        const year = startDate.getFullYear();
-        const month = parseInt(startDate.getMonth()) + 1 < 10 ? `0${parseInt(startDate.getMonth()) + 1}` : parseInt(startDate.getMonth()) + 1;
-        const day = startDate.getDate() < 10 ? `0${startDate.getDate()}` : startDate.getDate();
-        const hour = startDate.getHours() < 10 ? `0${startDate.getHours()}` : startDate.getHours();
-
-        return `https://ecft.fulfillment.a2z.com/api/NA/nssp/get_nssp_big_table_new?fcSelected=ABE4%2CACY2%2CAKR1%2CAMA1%2CCHA2%2CCHO1%2CDEN8%2CFAT2%2CFOE1%2CFTW5%2CGEG2%2CHOU8%2CHSV1%2CICT2%2CIGQ2%2CILG1%2CIND2%2CLAS6%2CLFT1%2CLGB6%2CLIT2%2CMCE1%2CMCO2%2CMDT4%2CMDW6%2CMDW9%2COKC2%2CPDX7%2CPHL6%2CPHX5%2CPHX7%2CSAT4%2CSCK1%2CSJC7%2CSLC2%2CSMF6%2CSTL3%2CSTL4%2CSWF1%2CTEB4%2CTPA3%2CYEG1&region=NA&startDate=${year}-${month}-${day}&startTime=${hour}%3A00%3A00`
+        const startDate = document.getElementById('startDateIntraday').value.split("/")
+        const startHour = document.getElementById('startHourIntraday').value
+        let date = new Date(startDate[0], startDate[1], startDate[2], startHour - 3)
+        month = date.getMonth() < 10 ? `0${date.getMonth()}` : date.getMonth()
+        
+        console.log(`https://ecft.fulfillment.a2z.com/api/NA/nssp/get_nssp_big_table_new?startDate=${date.getFullYear()}-${month}-${date.getDate()}&startTime=${date.getHours()}:00:00&fcSelected=ABE4,ACY2,AKR1,ALB1,AMA1,CHA2,CHO1,CMH2,CMH3,DEN8,DET2,FAT2,FOE1,FTW5,GEG2,GSO1,HOU8,HSV1,ICT2,IGQ2,ILG1,IND2,JAX3,JVL1,LAS6,LFT1,LGB6,LIT2,MCE1,MCO2,MDT4,MDW6,MDW9,MGE3,MKC4,OKC2,ORD2,PDX7,PHL6,PHX5,PHX7,SAT4,SCK1,SJC7,SLC2,SMF6,STL3,STL4,SWF1,TEB3,TEB4,TPA3,YEG1,YOO1,YOW1,YYZ9&region=NA`)
+        return `https://ecft.fulfillment.a2z.com/api/NA/nssp/get_nssp_big_table_new?startDate=${date.getFullYear()}-${month}-${date.getDate()}&startTime=${date.getHours()}:00:00&fcSelected=ABE4,ACY2,AKR1,ALB1,AMA1,CHA2,CHO1,CMH2,CMH3,DEN8,DET2,FAT2,FOE1,FTW5,GEG2,GSO1,HOU8,HSV1,ICT2,IGQ2,ILG1,IND2,JAX3,JVL1,LAS6,LFT1,LGB6,LIT2,MCE1,MCO2,MDT4,MDW6,MDW9,MGE3,MKC4,OKC2,ORD2,PDX7,PHL6,PHX5,PHX7,SAT4,SCK1,SJC7,SLC2,SMF6,STL3,STL4,SWF1,TEB3,TEB4,TPA3,YEG1,YOO1,YOW1,YYZ9&region=NA`
     }
 
     function getPickData(planTime) {
