@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      1.4.0
+// @version      1.5.0
 // @description  Pull planned hcs/rates and compare against ppa
 // @author       mooshahe
 // @match        https://fclm-portal.amazon.com/ppa/inspect/*
@@ -207,6 +207,16 @@ function runScript() {
         const startInput = document.createElement('input');
         startInput.style.color = 'black';
         startInput.placeholder = 'ex: 07:30';
+        let startFirstTime = true
+        startInput.addEventListener('input', (e) => {
+            if (startInput.value.length < 2) {
+                startFirstTime = true
+            }
+            if (startInput.value.length == 2 && startFirstTime) {
+                startInput.value += ":"
+                startFirstTime = false
+            }
+        })
         startDiv.appendChild(startInput);
         div.appendChild(startDiv);
         if (getUserTimes()) {
@@ -222,6 +232,16 @@ function runScript() {
         const endInput = document.createElement('input');
         endInput.style.color = 'black';
         endInput.placeholder = 'ex: 09:45';
+        let endFirstTime = true
+        endInput.addEventListener('input', (e) => {
+            if (endInput.value.length < 2) {
+                endFirstTime = true
+            }
+            if (endInput.value.length == 2 && endFirstTime) {
+                endInput.value += ":"
+                endFirstTime = false
+            }
+        })
         endDiv.appendChild(endInput);
         div.appendChild(endDiv);
         if (getUserTimes()) {
