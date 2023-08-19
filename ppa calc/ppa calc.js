@@ -95,16 +95,80 @@ function runScript() {
 
         const advisory = document.createElement('p');
         advisory.textContent = `Times should be in 24hr format i.e. 07:30, 15:30, 00:30, 03:45`;
-        advisory.style.cssText+= 'font-size: 1.2rem; text-align: center;';
+        advisory.style.cssText+= 'font-size: 1.3rem; text-align: center;';
         modal.appendChild(advisory); 
 
-        const timeDiv = document.createElement('div');
-        timeDiv.setAttribute('id', 'modal-input-div');
-        timeDiv.style.cssText += `display: flex; flex-direction: column; gap: 2rem;`
-        for (let i = 1; i < 6; i++) {
-            timeDiv.appendChild(makeTimeInputDiv(i));
+        const masterInputDiv = document.createElement("div")
+        masterInputDiv.setAttribute("id", "master-input-div")
+        masterInputDiv.style.cssText += 'display: flex; flex-direction: column;'
+        modal.appendChild(masterInputDiv)
+
+        // used to auto select day or night times
+        const date = new Date()
+        let dayshiftSelect = true
+        if (date.getHours() > 17 || date.getHours() < 6) {
+            !dayshiftSelect
         }
-        modal.appendChild(timeDiv);
+
+        const shiftDiv = document.createElement("div")
+        shiftDiv.style.cssText += 'display: flex; justify-content: space-around; margin-top: 1rem; margin-bottom: 1rem; border: 2px solid black;'
+        masterInputDiv.appendChild(shiftDiv)
+
+        const dayShiftButton = document.createElement("div")
+        dayShiftButton.textContent = "Dayshift"
+        dayShiftButton.setAttribute("id", "dayshift-btn")
+        dayShiftButton.style.cssText += "cursor: pointer; font-size: 1.7rem; width: 50%; text-align: center;"
+        if (dayshiftSelect) {
+            dayShiftButton.style.backgroundColor = "gray"
+        }
+        shiftDiv.appendChild(dayShiftButton)
+
+        const nightShiftButton = document.createElement("div")
+        nightShiftButton.textContent = "Nightshift"
+        nightShiftButton.style.cssText += "cursor: pointer; font-size: 1.7rem; width: 50%; text-align: center;"
+        if (!dayshiftSelect) {
+            nightShiftButton.style.backgroundColor = "gray"
+        }
+        shiftDiv.appendChild(nightShiftButton)
+
+        const dayshiftTimeDiv = document.createElement('div');
+        dayshiftTimeDiv.setAttribute('id', 'dayshift-modal-input-div');
+        dayshiftTimeDiv.style.cssText += `flex-direction: column; gap: 2rem;`
+        for (let i = 1; i < 6; i++) {
+            dayshiftTimeDiv.appendChild(makeTimeInputDiv(i, 'ds'));
+        }
+        if (dayshiftSelect) {
+            dayshiftTimeDiv.style.display = "flex"
+        } else {
+            dayshiftTimeDiv.style.display = "none"
+        }
+        masterInputDiv.appendChild(dayshiftTimeDiv);
+
+        const nightshiftTimeDiv = document.createElement('div');
+        nightshiftTimeDiv.setAttribute('id', 'nightshift-modal-input-div');
+        nightshiftTimeDiv.style.cssText += `flex-direction: column; gap: 2rem;`
+        for (let i = 1; i < 6; i++) {
+            nightshiftTimeDiv.appendChild(makeTimeInputDiv(i, 'ns'));
+        }
+        if (!dayshiftSelect) {
+            nightshiftTimeDiv.style.display = "flex"
+        } else {
+            nightshiftTimeDiv.style.display = "none"
+        }
+        masterInputDiv.appendChild(nightshiftTimeDiv);
+
+        dayShiftButton.addEventListener('click', () => {
+            dayShiftButton.style.backgroundColor = "gray"
+            nightShiftButton.style.backgroundColor = "white"
+            dayshiftTimeDiv.style.display = "flex"
+            nightshiftTimeDiv.style.display = "none"
+        })
+        nightShiftButton.addEventListener('click', () => {
+            dayShiftButton.style.backgroundColor = "white"
+            nightShiftButton.style.backgroundColor = "gray"
+            dayshiftTimeDiv.style.display = "none"
+            nightshiftTimeDiv.style.display = "flex"
+        })
         
         const buttonDiv = document.createElement('div');
         buttonDiv.style.cssText += `display: flex; gap: 2rem; align-self: center;`;
@@ -128,7 +192,7 @@ function runScript() {
         exitButton.addEventListener('click', closeModal);
         buttonDiv.appendChild(exitButton);
 
-        timeDiv.appendChild(buttonDiv);
+        masterInputDiv.appendChild(buttonDiv);
 
         return modal;
     }
@@ -157,12 +221,17 @@ function runScript() {
         dateButtonTray.style.cssText += `display: flex; gap: 0.1rem;`;
         loadDateButtons(dateButtonTray);
 
-        const timeButtonTray = document.createElement('div');
-        timeButtonTray.style.cssText += `display: flex; gap: 0.1rem;`;
-        loadTimeButtons(timeButtonTray);
+        const dayshifTimeButtonTray = document.createElement('div');
+        dayshifTimeButtonTray.style.cssText += `display: flex; gap: 0.1rem;`;
+        loadTimeButtons(dayshifTimeButtonTray, 'ds');
+
+        const nightshifTimeButtonTray = document.createElement('div');
+        nightshifTimeButtonTray.style.cssText += `display: flex; gap: 0.1rem;`;
+        loadTimeButtons(nightshifTimeButtonTray, 'ns');
 
         div.appendChild(dateButtonTray);
-        div.appendChild(timeButtonTray);
+        div.appendChild(dayshifTimeButtonTray);
+        div.appendChild(nightshifTimeButtonTray)
 
         return div;
     }
@@ -191,7 +260,7 @@ function runScript() {
     |DOM factories|
     \*************/
     
-    function makeTimeInputDiv(number) {
+    function makeTimeInputDiv(number, shift) {
         const div = document.createElement('div');
         div.style.cssText += `display:flex; gap: 2rem;`;
 
@@ -220,8 +289,10 @@ function runScript() {
         startDiv.appendChild(startInput);
         div.appendChild(startDiv);
         if (getUserTimes()) {
-            if (getUserTimes()[`start${number}`]) {
-                startInput.value = getUserTimes()[`start${number}`];
+            console.log(getUserTimes())
+            console.log(`${shift}-start${number}`)
+            if (getUserTimes()[`${shift}_start${number}`]) {
+                startInput.value = getUserTimes()[`${shift}_start${number}`];
             }
         }
 
@@ -245,8 +316,8 @@ function runScript() {
         endDiv.appendChild(endInput);
         div.appendChild(endDiv);
         if (getUserTimes()) {
-            if (getUserTimes()[`end${number}`]) {
-                endInput.value = getUserTimes()[`end${number}`];
+            if (getUserTimes()[`${shift}_end${number}`]) {
+                endInput.value = getUserTimes()[`${shift}_end${number}`];
             }
         }
 
@@ -302,7 +373,7 @@ function runScript() {
         return button;
     }
 
-    function makeTimeButton(name, i) {
+    function makeTimeButton(name, i, shift) {
         const button = document.createElement('button');
         button.textContent = name;
         button.style.cssText += `
@@ -313,10 +384,10 @@ function runScript() {
 
         if (i) {
             button.addEventListener('click', () => {
-                const startHour = getUserTimes()[`start${i}`].split(':')[0];
-                const startMinute = getUserTimes()[`start${i}`].split(':')[1];
-                const endHour = getUserTimes()[`end${i}`].split(':')[0];
-                const endMinute = getUserTimes()[`end${i}`].split(':')[1];
+                const startHour = getUserTimes()[`${shift}_start${i}`].split(':')[0];
+                const startMinute = getUserTimes()[`${shift}_start${i}`].split(':')[1];
+                const endHour = getUserTimes()[`${shift}_end${i}`].split(':')[0];
+                const endMinute = getUserTimes()[`${shift}_end${i}`].split(':')[1];
                 document.getElementById('startHourIntraday').selectedIndex = startHour;
                 document.getElementById('startMinuteIntraday').selectedIndex = getSelectIndexMinute(startMinute);
                 document.getElementById('endHourIntraday').selectedIndex = endHour;
@@ -358,20 +429,21 @@ function runScript() {
         dateButtonTray.appendChild(yesterdayAndToday);
     }
 
-    function loadTimeButtons(timeButtonTray) {
+    function loadTimeButtons(timeButtonTray, shift) {
         // first determine if periods or quarters by checking fourth time. if this is null, it's periods, otherwise quarters
         let isPeriods = true;
         const userTimes = getUserTimes();
-        if (userTimes.start4 && userTimes.end4) {
+        console.log(userTimes)
+        if (userTimes[`${shift}_start4`] && userTimes[`${shift}_end4`]) {
             isPeriods = false;
         }
 
         for (let i = 1; i < 6; i++) {
-            const title = isPeriods ? 'Period' : 'Quarter';
-            const start = userTimes[`start${i}`];
-            const end = userTimes[`end${i}`];
+            const title = isPeriods ? `${shift.toUpperCase()} Period` : `${shift.toUpperCase()} Quarter`;
+            const start = userTimes[`${shift}_start${i}`];
+            const end = userTimes[`${shift}_end${i}`];
             if (start && end) {
-                timeButtonTray.appendChild(makeTimeButton(`${title}${i}`, i));
+                timeButtonTray.appendChild(makeTimeButton(`${title}${i}`, i, shift));
             }
         }
     }
@@ -741,16 +813,26 @@ function runScript() {
         const parent = e.target.parentElement.parentElement;
         const inputs = Array.from(parent.querySelectorAll('input'));
         const timeObject = {
-            start1: inputs[0].value,
-            end1: inputs[1].value,
-            start2: inputs[2].value,
-            end2: inputs[3].value,
-            start3: inputs[4].value,
-            end3: inputs[5].value,
-            start4: inputs[6].value,
-            end4: inputs[7].value,
-            start5: inputs[8].value,
-            end5: inputs[9].value 
+            ds_start1: inputs[0].value,
+            ds_end1: inputs[1].value,
+            ds_start2: inputs[2].value,
+            ds_end2: inputs[3].value,
+            ds_start3: inputs[4].value,
+            ds_end3: inputs[5].value,
+            ds_start4: inputs[6].value,
+            ds_end4: inputs[7].value,
+            ds_start5: inputs[8].value,
+            ds_end5: inputs[9].value,
+            ns_start1: inputs[10].value,
+            ns_end1: inputs[11].value,
+            ns_start2: inputs[12].value,
+            ns_end2: inputs[13].value,
+            ns_start3: inputs[14].value,
+            ns_end3: inputs[15].value,
+            ns_start4: inputs[16].value,
+            ns_end4: inputs[17].value,
+            ns_start5: inputs[18].value,
+            ns_end5: inputs[19].value  
         }
 
         // put the object into storage
