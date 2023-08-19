@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      1.3.1
+// @version      1.3.3
 // @description  Pull planned hcs/rates and compare against ppa
 // @author       mooshahe
 // @match        https://fclm-portal.amazon.com/ppa/inspect/*
@@ -12,9 +12,21 @@
 // ==/UserScript==
 
 
+usingChrome = navigator.userAgent.includes("Chrome") ? true : false
 
+if (usingChrome) {
+    /* very first thing is to check browser. if it is Chrome, do not run the script.
+    the planner uses Chrome to run selenium so if the plugin is ran through Chrome there could
+    potentially be way more calls than necessary since the planner opens PPA for rate pulls
+    */
+    console.log("You are using Chrome. This plugin only works with Firefox")
+    return
+} else {
+    runScript()
+}
 
-(() => {
+function runScript() {
+
     /****************\
     |global variables|
     \****************/
@@ -47,17 +59,9 @@
         // only load table data if it's not already loaded in
         if (document.getElementById('table-div')) {
             return;
-            // only load table data if it is not full shift. must account for dayshift and nightshift time differences between quarters/periods as nights crosses over a day
-            // first check if it's day shift. if so, difference between start and end hour should be less than 9
-        } else if (document.getElementById('startDateIntraday').value === document.getElementById('endDateIntraday').value) {
-            console.log('the days are equal');
-            if ((Math.abs(document.getElementById('startHourIntraday').value - document.getElementById('endHourIntraday').value) < 9)) {
+            
+        } else {
                 loadTableData();
-            }
-        } else { //accounts for night shift if the start date and end date are different. in this case shift length should be greater than 15
-            if ((document.getElementById('startHourIntraday').value - document.getElementById('endHourIntraday').value) > 15) {
-                loadTableData();
-            }
         }
     }
 
@@ -155,27 +159,6 @@
 
         const timeButtonTray = document.createElement('div');
         timeButtonTray.style.cssText += `display: flex; gap: 0.1rem;`;
-        const fullShiftButton = makeTimeButton('Full Shift');
-        fullShiftButton.addEventListener('click', () => {
-            let endTime;
-            // must iterate backwards to find endtime
-            for (let i = 5; i > 0; i--) {
-                if (getUserTimes()[`end${i}`]) {
-                    endTime = getUserTimes()[`end${i}`];
-                    break;
-                }
-            }
-            const startHour = getUserTimes()[`start${1}`].split(':')[0];
-            const startMinute = getUserTimes()[`start${1}`].split(':')[1];
-            const endHour = endTime.split(':')[0];
-            const endMinute = endTime.split(':')[1];
-            document.getElementById('startHourIntraday').selectedIndex = startHour;
-            document.getElementById('startMinuteIntraday').selectedIndex = getSelectIndexMinute(startMinute);
-            document.getElementById('endHourIntraday').selectedIndex = endHour;
-            document.getElementById('endMinuteIntraday').selectedIndex = getSelectIndexMinute(endMinute);
-        })
-
-        timeButtonTray.appendChild(fullShiftButton);
         loadTimeButtons(timeButtonTray);
 
         div.appendChild(dateButtonTray);
@@ -801,6 +784,20 @@
     \****************/
 
     async function loadTableData() {
+        // api should only load if the time period is > 1.25 hours and < 5 hours in order to reduce api calls
+        startDate = document.getElementById('startDateIntraday').value.split("/")
+        startHour = document.getElementById('startHourIntraday').value
+        startMinute = document.getElementById('startMinuteIntraday').value
+        startDateCombined = new Date(startDate[0], startDate[1] - 1, startDate[2], startHour, startMinute)
+        endDate = document.getElementById('endDateIntraday').value.split("/")
+        endHour = document.getElementById('endHourIntraday').value
+        endMinute = document.getElementById('endMinuteIntraday').value
+        endDateCombined = new Date(endDate[0], endDate[1] - 1, endDate[2], endHour, endMinute)
+        differenceInMinutes = (endDateCombined - startDateCombined) / 1000 / 60
+        if (differenceInMinutes > 300 || differenceInMinutes < 90) {
+            return
+        }
+
         loadStatusMessage('Finding plan data from dashboard');
         const planTime = await getPlanTime();
         document.getElementById('status-message').remove();
@@ -1925,6 +1922,6 @@
         return rebinDataObject;
     }
 
-})(); 
+}
 
 
