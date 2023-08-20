@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      1.5.1
+// @version      1.5.2
 // @description  Pull planned hcs/rates and compare against ppa
 // @author       mooshahe
 // @match        https://fclm-portal.amazon.com/ppa/inspect/*
@@ -529,6 +529,7 @@ function runScript() {
         row.style.backgroundColor = rowCount % 2 === 0 ? 'white' : '#e5e7eb';
 
         const ppTd = makeTd(pathName);
+        ppTd.classList.add("pp")
         ppTd.style.cssText += `padding-left: 0.3rem; padding-right: 0.5rem; text-align: left; cursor: pointer;`
         row.appendChild(ppTd);
 
@@ -551,6 +552,7 @@ function runScript() {
         row.style.backgroundColor = rowCount % 2 === 0 ? 'white' : '#e5e7eb';
 
         const ppTd = makeTd(pathName);
+        ppTd.classList.add("pp")
         ppTd.style.cssText += `padding-left: 0.3rem; padding-right: 0.5rem; text-align: left; cursor: pointer;`
         row.appendChild(ppTd);
 
@@ -569,6 +571,7 @@ function runScript() {
         row.style.backgroundColor = rowCount % 2 === 0 ? 'white' : '#e5e7eb';
 
         const ppTd = makeTd(pathName);
+        ppTd.classList.add("pp")
         ppTd.style.cssText += `padding-left: 0.3rem; padding-right: 0.5rem; text-align: left; cursor: pointer;`
         row.appendChild(ppTd);
 
@@ -663,6 +666,7 @@ function runScript() {
         row.style.backgroundColor = rowCount % 2 === 0 ? 'white' : '#e5e7eb';
 
         const ppTd = makeTd(pathName);
+        ppTd.classList.add("pp")
         ppTd.style.cssText += `padding-left: 0.3rem; padding-right: 0.5rem; text-align: left;`
         row.appendChild(ppTd);
 
@@ -690,6 +694,7 @@ function runScript() {
         row.style.backgroundColor = rowCount % 2 === 0 ? 'white' : '#e5e7eb';
 
         const ppTd = makeTd(pathName);
+        ppTd.classList.add("pp")
         ppTd.style.cssText += `padding-left: 0.3rem; padding-right: 0.5rem; text-align: left;`
         row.appendChild(ppTd);
 
@@ -716,6 +721,7 @@ function runScript() {
         row.style.backgroundColor = rowCount % 2 === 0 ? 'white' : '#e5e7eb';
 
         const ppTd = makeTd(pathName);
+        ppTd.classList.add("pp")
         ppTd.style.cssText += `padding-left: 0.3rem; padding-right: 0.5rem; text-align: left;`
         row.appendChild(ppTd);
 
@@ -760,30 +766,66 @@ function runScript() {
 
     function addToSummary(e, pathName, processPath) {
         const summaryTable = document.getElementById("summary-table")
-        let td = e.target
-        if (!e.target.classList.contains('selected-summary')) {
-            td.classList.add('selected-summary')
-            td.style.backgroundColor = '#6ee7b7'
-            summaryPaths.plannedHcs += parseFloat(processPath.planned_hc)
-            summaryPaths.actualHcs += parseFloat(processPath.actual_hc)
-            summaryPaths.plannedCapacity += parseFloat(processPath.planned_rate * processPath.planned_hc * getTimeDiff())
-            summaryPaths.actualCapacity += parseFloat(processPath.actual_quantity)
-        } else {
-            e.target.classList.remove('selected-summary')
-            td.style.backgroundColor = e.target.parentElement.childNodes[1].style.backgroundColor
-            summaryPaths.plannedHcs -= parseFloat(processPath.planned_hc).toFixed(1)
-            summaryPaths.actualHcs -= parseFloat(processPath.actual_hc).toFixed(1)
-            summaryPaths.plannedCapacity -= parseFloat(processPath.planned_rate * processPath.planned_hc * getTimeDiff()).toFixed(1)
-            summaryPaths.actualCapacity -= parseFloat(processPath.actual_quantity).toFixed(1)
-            if (document.getElementsByClassName('selected-summary').length == 0) {
-            summaryPaths.plannedHcs = 0
-            summaryPaths.actualHcs = 0
-            summaryPaths.plannedCapacity = 0
-            summaryPaths.actualCapacity = 0
+        ppTds = Array.from(document.getElementsByClassName("pp"))
+        console.log(processPath)
+        for (i in ppTds) {
+            if (ppTds[i].textContent == pathName) {
+                if (!ppTds[i].classList.contains("selected-summary")) {
+                    ppTds[i].classList.add("selected-summary")
+                    ppTds[i].style.backgroundColor = "#6ee7b7"
+                    if (ppTds[i] == e.target) {
+                        summaryPaths.plannedHcs += parseFloat(processPath.planned_hc)
+                        summaryPaths.actualHcs += parseFloat(processPath.actual_hc)
+                        summaryPaths.plannedCapacity += parseFloat(processPath.planned_rate * processPath.planned_hc * getTimeDiff())
+                        console.log(processPath.actual_quantity)
+                        summaryPaths.actualCapacity += parseInt(processPath.actual_quantity)
+                    }
+                } else {
+                    ppTds[i].classList.remove("selected-summary")
+                    ppTds[i].style.backgroundColor = ppTds[i].parentElement.style.backgroundColor
+                    if (ppTds[i] == e.target) {
+                        summaryPaths.plannedHcs -= parseFloat(processPath.planned_hc)
+                        summaryPaths.actualHcs -= parseFloat(processPath.actual_hc)
+                        summaryPaths.plannedCapacity -= parseFloat(processPath.planned_rate * processPath.planned_hc * getTimeDiff()).toFixed(1)
+                        summaryPaths.actualCapacity -= processPath.actual_quantity
+                    }
+                    if (document.getElementsByClassName("selected-summary").length == 0) {
+                        summaryPaths.plannedHcs = 0
+                        summaryPaths.actualHcs = 0
+                        summaryPaths.plannedCapacity = 0
+                        summaryPaths.actualCapacity = 0
+                    }
+                }
             }
         }
-        if (summaryPaths.paths.length == 1) {
+
+        if (document.getElementsByClassName("selected-summary").length == 0) {
+            if (document.getElementById("summary-table-category-row")) {
+                document.getElementById("summary-table-category-row").remove()
+            }
+            if (document.getElementById("summary-stats")) {
+                document.getElementById("summary-stats").remove()
+            }
+
+            const yellowPromptRow = document.createElement('tr')
+            yellowPromptRow.setAttribute('id', 'yellow-summary-table-prompt')
+            yellowPromptRow.textContent = 'Click on a process path name in any of the tables to add them here'
+            yellowPromptRow.style.cssText += 'background-color: yellow'
+            summaryTable.append(yellowPromptRow)
+
+            const greenPromptRow = document.createElement("tr")
+            greenPromptRow.setAttribute('id', 'green-summary-table-prompt')
+            greenPromptRow.textContent = 'You can remove the process path from this table by clicking on its name again'
+            greenPromptRow.style.cssText += 'background-color: #6ee7b7'
+            summaryTable.append(greenPromptRow)
+
+        } else if (document.getElementsByClassName("selected-summary").length == 3 && !document.getElementById("summary-table-category-row")) {
+            if (document.getElementById("yellow-summary-table-prompt")) {
+                document.getElementById("yellow-summary-table-prompt").remove()
+                document.getElementById("green-summary-table-prompt").remove()
+            }
             const categoriesRow = document.createElement('tr');
+            categoriesRow.setAttribute("id", "summary-table-category-row")
             categoriesRow.style.cssText += `
                 font-size: 1.2rem;
                 color: white;
@@ -811,23 +853,23 @@ function runScript() {
             const td9 = makeHeaderTd('Capacity Delta')
             categoriesRow.appendChild(td9)
             summaryTable.appendChild(categoriesRow);
-        }
-        
+            addSummaryStats()
+        } else {
+            addSummaryStats()
+    }
 
-        if (document.getElementById("summary-table-category-row")) {
-            document.getElementById("summary-table-category-row").remove()
-        }
-        
+    function addSummaryStats() {
+        const summaryTable = document.getElementById("summary-table")
         if (document.getElementById('summary-stats')) {
             document.getElementById('summary-stats').remove()
         }
 
-        
-        
+        console.log(summaryPaths)
+
         const summaryRow = document.createElement('tr')
         summaryRow.setAttribute("id", "summary-stats")
 
-        const plannedHcTd = makeTd(summaryPaths.plannedHcs)
+        const plannedHcTd = makeTd(summaryPaths.plannedHcs.toFixed(1))
         summaryRow.appendChild(plannedHcTd)
 
         const actualHc = parseFloat(parseFloat(summaryPaths.actualHcs) / getTimeDiff().toFixed(1))
@@ -847,11 +889,12 @@ function runScript() {
         summaryRow.appendChild(makeDeltaTd(plannedRate, actualRate))
 
         summaryRow.appendChild(makeTd(plannedCapacity.toFixed(1)))
-        summaryRow.appendChild(makeTd(actualCapacity.toFixed(1)))
+        summaryRow.appendChild(makeTd(actualCapacity))
         summaryRow.appendChild(makeDeltaTd(summaryPaths.plannedCapacity, actualCapacity))
 
 
         summaryTable.appendChild(summaryRow)
+    }
     }
 
     function makeCalculateButton() {
@@ -1041,13 +1084,13 @@ function runScript() {
                 // iterate over each process path and update object if there is data for that input
                 for (const processPath in data) {
                     if (document.getElementById(`${processPath}-planned-hc-input`)) {
-                        data[`${processPath}`]['planned_hc'] = document.getElementById(`${processPath}-planned-hc-input`).value;
+                        data[`${processPath}`]['planned_hc'] = parseFloat(document.getElementById(`${processPath}-planned-hc-input`).value);
                     }
                     if (document.getElementById(`${processPath}-planned-rate-input`)) {
-                        data[`${processPath}`]['planned_rate'] = document.getElementById(`${processPath}-planned-rate-input`).value;
+                        data[`${processPath}`]['planned_rate'] = parseFloat(document.getElementById(`${processPath}-planned-rate-input`).value);
                     }
                     if (document.getElementById(`${processPath}-planned-hc-input`) && document.getElementById(`${processPath}-planned-rate-input`)) {
-                        data[`${processPath}`]['planned_quantity'] = document.getElementById(`${processPath}-planned-hc-input`).value * document.getElementById(`${processPath}-planned-rate-input`).value * getTimeDiff();
+                        data[`${processPath}`]['planned_quantity'] = parseFloat(document.getElementById(`${processPath}-planned-hc-input`).value * document.getElementById(`${processPath}-planned-rate-input`).value * getTimeDiff());
                     }
                 }
                 document.getElementById('table-div').remove();
@@ -1883,11 +1926,17 @@ function runScript() {
         titleRow.appendChild(titleHeader);
         summaryTable.appendChild(titleRow);
 
-        const categoryRow = document.createElement('tr')
-        categoryRow.setAttribute('id', 'summary-table-category-row')
-        categoryRow.textContent = 'Click on a process path name in any of the tables to add them here'
-        categoryRow.style.cssText += 'background-color: yellow'
-        summaryTable.append(categoryRow)
+        const yellowPromptRow = document.createElement("tr")
+        yellowPromptRow.setAttribute('id', 'yellow-summary-table-prompt')
+        yellowPromptRow.textContent = 'Click on a process path name in any of the tables to add them here'
+        yellowPromptRow.style.cssText += 'background-color: yellow'
+        summaryTable.append(yellowPromptRow)
+
+        const greenPromptRow = document.createElement("tr")
+        greenPromptRow.setAttribute('id', 'green-summary-table-prompt')
+        greenPromptRow.textContent = 'You can remove the process path from this table by clicking on its name again'
+        greenPromptRow.style.cssText += 'background-color: #6ee7b7'
+        summaryTable.append(greenPromptRow)
 
         return summaryTable
     }
@@ -2021,14 +2070,14 @@ function runScript() {
             const actualsData = getProcessPathInfo(processPath);
             allPickData[`${processPath}`] = {};
 
-            allPickData[`${processPath}`]['planned_hc'] = parsedPickData[i].planned_hc_hr;
-            allPickData[`${processPath}`]['actual_hc'] = actualsData ? actualsData[5].textContent : 0;
+            allPickData[`${processPath}`]['planned_hc'] = parseFloat(parsedPickData[i].planned_hc_hr);
+            allPickData[`${processPath}`]['actual_hc'] = parseFloat(actualsData ? actualsData[5].textContent.replaceAll(",", "") : 0);
 
             allPickData[`${processPath}`]['planned_rate'] = parseFloat(parsedPickData[i].rate_pick.toFixed(1));
-            allPickData[`${processPath}`]['actual_rate'] = actualsData ? actualsData[7].textContent : 0;
+            allPickData[`${processPath}`]['actual_rate'] = parseFloat(actualsData ? actualsData[7].textContent.replaceAll(",", "") : 0);
 
-            allPickData[`${processPath}`]['planned_quantity_hr'] = Math.round(parsedPickData[i].planned_hc_hr * parsedPickData[i].rate_pick);
-            allPickData[`${processPath}`]['actual_quantity'] = actualsData ? actualsData[2].textContent : 0;
+            allPickData[`${processPath}`]['planned_quantity_hr'] = parseFloat(Math.round(parsedPickData[i].planned_hc_hr * parsedPickData[i].rate_pick));
+            allPickData[`${processPath}`]['actual_quantity'] = parseInt(actualsData ? actualsData[2].textContent.replaceAll(",", "") : 0);
         }
 
         return allPickData;
@@ -2046,13 +2095,13 @@ function runScript() {
             allPackData[`${processPath}`] = {};
 
             allPackData[`${processPath}`]['planned_hc'] = parseFloat(parsedPackData[i].hc_pack.toFixed(1));
-            allPackData[`${processPath}`]['actual_hc'] = actualsData ? actualsData[5].textContent : 0;
+            allPackData[`${processPath}`]['actual_hc'] = parseFloat(actualsData ? actualsData[5].textContent.replaceAll(",", "") : 0);
 
             allPackData[`${processPath}`]['planned_rate'] = parseFloat(parsedPackData[i].rate_pack.toFixed(1));
-            allPackData[`${processPath}`]['actual_rate'] = actualsData ? actualsData[7].textContent : 0;
+            allPackData[`${processPath}`]['actual_rate'] = parseFloat(actualsData ? actualsData[7].textContent.replaceAll(",", "") : 0);
 
-            allPackData[`${processPath}`]['planned_quantity_hr'] = Math.round(parsedPackData[i].hc_pack * parsedPackData[i].rate_pack);
-            allPackData[`${processPath}`]['actual_quantity'] = actualsData ? actualsData[2].textContent : 0;
+            allPackData[`${processPath}`]['planned_quantity_hr'] = parseFloat(Math.round(parsedPackData[i].hc_pack * parsedPackData[i].rate_pack));
+            allPackData[`${processPath}`]['actual_quantity'] = parseInt(actualsData ? actualsData[2].textContent.replaceAll(",", "") : 0);
         }
 
         return allPackData;
