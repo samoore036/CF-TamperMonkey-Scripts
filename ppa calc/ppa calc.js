@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      1.5.0
+// @version      1.5.1
 // @description  Pull planned hcs/rates and compare against ppa
 // @author       mooshahe
 // @match        https://fclm-portal.amazon.com/ppa/inspect/*
@@ -38,7 +38,13 @@ function runScript() {
     let plannedCapacityTotal = 0;
     let actualCapacityTotal = 0;
     let capacityDeltaTotal = 0;
-    let hasData = true;
+    const summaryPaths = {
+        paths: [],
+        plannedHcs: 0,
+        actualHcs: 0,
+        plannedCapacity: 0,
+        actualCapacity: 0
+    }
 
     // used to alternate row colors
     let rowCount = 0;
@@ -289,8 +295,6 @@ function runScript() {
         startDiv.appendChild(startInput);
         div.appendChild(startDiv);
         if (getUserTimes()) {
-            console.log(getUserTimes())
-            console.log(`${shift}-start${number}`)
             if (getUserTimes()[`${shift}_start${number}`]) {
                 startInput.value = getUserTimes()[`${shift}_start${number}`];
             }
@@ -433,7 +437,6 @@ function runScript() {
         // first determine if periods or quarters by checking fourth time. if this is null, it's periods, otherwise quarters
         let isPeriods = true;
         const userTimes = getUserTimes();
-        console.log(userTimes)
         if (userTimes[`${shift}_start4`] && userTimes[`${shift}_end4`]) {
             isPeriods = false;
         }
@@ -526,7 +529,7 @@ function runScript() {
         row.style.backgroundColor = rowCount % 2 === 0 ? 'white' : '#e5e7eb';
 
         const ppTd = makeTd(pathName);
-        ppTd.style.cssText += `padding-left: 0.3rem; padding-right: 0.5rem; text-align: left;`
+        ppTd.style.cssText += `padding-left: 0.3rem; padding-right: 0.5rem; text-align: left; cursor: pointer;`
         row.appendChild(ppTd);
 
         row.appendChild(makeTd(processPath.planned_hc));
@@ -537,6 +540,8 @@ function runScript() {
         row.appendChild(makeDeltaTd(processPath.planned_hc, actualHc));
         deltaTotal += actualHc - processPath.planned_hc;
 
+        ppTd.addEventListener('click', (e) => addToSummary(e, pathName, processPath))
+
         rowCount++;
         return row;
     }
@@ -546,12 +551,14 @@ function runScript() {
         row.style.backgroundColor = rowCount % 2 === 0 ? 'white' : '#e5e7eb';
 
         const ppTd = makeTd(pathName);
-        ppTd.style.cssText += `padding-left: 0.3rem; padding-right: 0.5rem; text-align: left;`
+        ppTd.style.cssText += `padding-left: 0.3rem; padding-right: 0.5rem; text-align: left; cursor: pointer;`
         row.appendChild(ppTd);
 
         row.appendChild(makeTd(processPath.planned_rate));
         row.appendChild(makeTd(processPath.actual_rate));
         row.appendChild(makeDeltaTd(processPath.planned_rate, processPath.actual_rate));
+
+        ppTd.addEventListener('click', (e) => addToSummary(e, pathName, processPath))
 
         rowCount++;
         return row;
@@ -562,7 +569,7 @@ function runScript() {
         row.style.backgroundColor = rowCount % 2 === 0 ? 'white' : '#e5e7eb';
 
         const ppTd = makeTd(pathName);
-        ppTd.style.cssText += `padding-left: 0.3rem; padding-right: 0.5rem; text-align: left;`
+        ppTd.style.cssText += `padding-left: 0.3rem; padding-right: 0.5rem; text-align: left; cursor: pointer;`
         row.appendChild(ppTd);
 
         const plannedCapacity = processPath.planned_rate * processPath.planned_hc * getTimeDiff();
@@ -576,6 +583,8 @@ function runScript() {
         const capacityDelta = actualCapacity - plannedCapacity;
         capacityDeltaTotal += capacityDelta;
         row.appendChild(makeDeltaTd(plannedCapacity, actualCapacity));
+
+        ppTd.addEventListener('click', (e) => addToSummary(e, pathName, processPath))
 
         rowCount++;
         return row;
@@ -747,6 +756,102 @@ function runScript() {
         }
         
         return row;
+    }
+
+    function addToSummary(e, pathName, processPath) {
+        const summaryTable = document.getElementById("summary-table")
+        let td = e.target
+        if (!e.target.classList.contains('selected-summary')) {
+            td.classList.add('selected-summary')
+            td.style.backgroundColor = '#6ee7b7'
+            summaryPaths.plannedHcs += parseFloat(processPath.planned_hc)
+            summaryPaths.actualHcs += parseFloat(processPath.actual_hc)
+            summaryPaths.plannedCapacity += parseFloat(processPath.planned_rate * processPath.planned_hc * getTimeDiff())
+            summaryPaths.actualCapacity += parseFloat(processPath.actual_quantity)
+        } else {
+            e.target.classList.remove('selected-summary')
+            td.style.backgroundColor = e.target.parentElement.childNodes[1].style.backgroundColor
+            summaryPaths.plannedHcs -= parseFloat(processPath.planned_hc).toFixed(1)
+            summaryPaths.actualHcs -= parseFloat(processPath.actual_hc).toFixed(1)
+            summaryPaths.plannedCapacity -= parseFloat(processPath.planned_rate * processPath.planned_hc * getTimeDiff()).toFixed(1)
+            summaryPaths.actualCapacity -= parseFloat(processPath.actual_quantity).toFixed(1)
+            if (document.getElementsByClassName('selected-summary').length == 0) {
+            summaryPaths.plannedHcs = 0
+            summaryPaths.actualHcs = 0
+            summaryPaths.plannedCapacity = 0
+            summaryPaths.actualCapacity = 0
+            }
+        }
+        if (summaryPaths.paths.length == 1) {
+            const categoriesRow = document.createElement('tr');
+            categoriesRow.style.cssText += `
+                font-size: 1.2rem;
+                color: white;
+                background-color: #3b82f6;
+                border-left: 1px solid black;
+                border-right: 1px solid black;
+            `
+
+            const td1 = makeHeaderTd('Planned HCs');
+            categoriesRow.appendChild(td1);
+            const td2 = makeHeaderTd('Actual HCs');
+            categoriesRow.appendChild(td2);
+            const td3 = makeHeaderTd('HC Delta');
+            categoriesRow.appendChild(td3);
+            const td4 = makeHeaderTd('Planned Rate');
+            categoriesRow.appendChild(td4);
+            const td5 = makeHeaderTd('Actual Rate')
+            categoriesRow.appendChild(td5)
+            const td6 = makeHeaderTd('Rate Delta')
+            categoriesRow.appendChild(td6)
+            const td7 = makeHeaderTd('Planned Capacity')
+            categoriesRow.appendChild(td7)
+            const td8 = makeHeaderTd('Actual Capacity')
+            categoriesRow.appendChild(td8)
+            const td9 = makeHeaderTd('Capacity Delta')
+            categoriesRow.appendChild(td9)
+            summaryTable.appendChild(categoriesRow);
+        }
+        
+
+        if (document.getElementById("summary-table-category-row")) {
+            document.getElementById("summary-table-category-row").remove()
+        }
+        
+        if (document.getElementById('summary-stats')) {
+            document.getElementById('summary-stats').remove()
+        }
+
+        
+        
+        const summaryRow = document.createElement('tr')
+        summaryRow.setAttribute("id", "summary-stats")
+
+        const plannedHcTd = makeTd(summaryPaths.plannedHcs)
+        summaryRow.appendChild(plannedHcTd)
+
+        const actualHc = parseFloat(parseFloat(summaryPaths.actualHcs) / getTimeDiff().toFixed(1))
+        const actualHcTd = makeTd(actualHc.toFixed(1))
+        summaryRow.appendChild(actualHcTd)
+
+        summaryRow.appendChild(makeDeltaTd(summaryPaths.plannedHcs, actualHc))
+
+        const plannedCapacity = summaryPaths.plannedCapacity
+        const plannedRate = ((parseFloat(plannedCapacity) / parseFloat(summaryPaths.plannedHcs)) / getTimeDiff()).toFixed(1)
+        summaryRow.appendChild(makeTd(plannedRate))
+
+        const actualCapacity = summaryPaths.actualCapacity
+        const actualRate = ((parseFloat(summaryPaths.actualCapacity) / actualHc) / getTimeDiff()).toFixed(2)
+        summaryRow.appendChild(makeTd(actualRate))
+
+        summaryRow.appendChild(makeDeltaTd(plannedRate, actualRate))
+
+        summaryRow.appendChild(makeTd(plannedCapacity.toFixed(1)))
+        summaryRow.appendChild(makeTd(actualCapacity.toFixed(1)))
+        summaryRow.appendChild(makeDeltaTd(summaryPaths.plannedCapacity, actualCapacity))
+
+
+        summaryTable.appendChild(summaryRow)
     }
 
     function makeCalculateButton() {
@@ -988,6 +1093,9 @@ function runScript() {
             tableDiv.appendChild(pickCapacityTable);
             div.appendChild(tableDiv);
 
+            const summaryTable = makeSummaryTable()
+            div.appendChild(summaryTable)
+
             parent.prepend(div);
         }
     }
@@ -1066,6 +1174,9 @@ function runScript() {
             const packCapacityTable = makeCapacityTable(packData);
             tableDiv.appendChild(packCapacityTable);
             div.appendChild(tableDiv);
+
+            const summaryTable = makeSummaryTable()
+            div.appendChild(summaryTable)
 
             parent.prepend(div);
         }
@@ -1749,6 +1860,37 @@ function runScript() {
 
         return capacityTable;
     }
+
+    function makeSummaryTable() {
+        const summaryTable = document.createElement('table')
+        summaryTable.setAttribute('id', 'summary-table')
+        summaryTable.style.cssText += `align-self: center; margin-top: 3rem; border: 1px solid black;
+        text-align: center; border-collapse: collapse;`
+
+        const titleRow = document.createElement('tr');
+        titleRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #3b82f6;
+            border: 1px solid black;
+            border-bottom: none;
+        `
+
+        const titleHeader = document.createElement('td');
+        titleHeader.textContent = 'Summary';
+        titleHeader.style.cssText += `text-align: center; font-size: 1.6rem; font-weight: bold;`;
+        titleHeader.colSpan = '9';
+        titleRow.appendChild(titleHeader);
+        summaryTable.appendChild(titleRow);
+
+        const categoryRow = document.createElement('tr')
+        categoryRow.setAttribute('id', 'summary-table-category-row')
+        categoryRow.textContent = 'Click on a process path name in any of the tables to add them here'
+        categoryRow.style.cssText += 'background-color: yellow'
+        summaryTable.append(categoryRow)
+
+        return summaryTable
+    }
     
     /**************\
     |plan API logic|
@@ -1850,7 +1992,6 @@ function runScript() {
         let date = new Date(startDate[0], startDate[1], startDate[2], startHour - 3)
         month = date.getMonth() < 10 ? `0${date.getMonth()}` : date.getMonth()
         
-        console.log(`https://ecft.fulfillment.a2z.com/api/NA/nssp/get_nssp_big_table_new?startDate=${date.getFullYear()}-${month}-${date.getDate()}&startTime=${date.getHours()}:00:00&fcSelected=ABE4,ACY2,AKR1,ALB1,AMA1,CHA2,CHO1,CMH2,CMH3,DEN8,DET2,FAT2,FOE1,FTW5,GEG2,GSO1,HOU8,HSV1,ICT2,IGQ2,ILG1,IND2,JAX3,JVL1,LAS6,LFT1,LGB6,LIT2,MCE1,MCO2,MDT4,MDW6,MDW9,MGE3,MKC4,OKC2,ORD2,PDX7,PHL6,PHX5,PHX7,SAT4,SCK1,SJC7,SLC2,SMF6,STL3,STL4,SWF1,TEB3,TEB4,TPA3,YEG1,YOO1,YOW1,YYZ9&region=NA`)
         return `https://ecft.fulfillment.a2z.com/api/NA/nssp/get_nssp_big_table_new?startDate=${date.getFullYear()}-${month}-${date.getDate()}&startTime=${date.getHours()}:00:00&fcSelected=ABE4,ACY2,AKR1,ALB1,AMA1,CHA2,CHO1,CMH2,CMH3,DEN8,DET2,FAT2,FOE1,FTW5,GEG2,GSO1,HOU8,HSV1,ICT2,IGQ2,ILG1,IND2,JAX3,JVL1,LAS6,LFT1,LGB6,LIT2,MCE1,MCO2,MDT4,MDW6,MDW9,MGE3,MKC4,OKC2,ORD2,PDX7,PHL6,PHX5,PHX7,SAT4,SCK1,SJC7,SLC2,SMF6,STL3,STL4,SWF1,TEB3,TEB4,TPA3,YEG1,YOO1,YOW1,YYZ9&region=NA`
     }
 
