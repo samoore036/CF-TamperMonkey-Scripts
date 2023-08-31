@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      1.5.2
+// @version      2.0
 // @description  Pull planned hcs/rates and compare against ppa
 // @author       mooshahe
 // @match        https://fclm-portal.amazon.com/ppa/inspect/*
@@ -30,7 +30,14 @@ function runScript() {
     /****************\
     |global variables|
     \****************/
-    const fc = document.getElementById('fcpn-site-input').value;
+    let fc = document.getElementById("WarehouseSelector").value;
+
+    // fc value changes when user selects a different warehouse through the selector
+    const selector = document.getElementById("WarehouseSelector")
+    selector.addEventListener("change", e => {
+        fc = e.target.value
+        console.log(`fc is now ${fc}`)
+    })
     const planTimes = [];
     let plannedTotal = 0;
     let actualTotal = 0;
@@ -1073,9 +1080,15 @@ function runScript() {
             div.style.cssText += `display: flex; flex-direction: column; margin-top: 4rem`;
 
             const p = document.createElement('p');
-            p.textContent = `No plan data found for time selected. Please enter plan data manually.`;
-            p.style.cssText += `font-size: 16px; align-self: center;`;
+            p.textContent = `No plan data found for time selected. If this is incorrect, please check the NSSP dashboard if a plan was sent within 50 minutes before the start of the time period, or 30 minutes after the start of the time period.`;
+            p.style.cssText += `font-size: 16px; align-self: center; text-align: center;`;
             div.appendChild(p);
+
+            const dashboardLink = document.createElement('a')
+            dashboardLink.textContent = "NSSP Dashboard"
+            dashboardLink.href = "https://ecft.fulfillment.a2z.com/#/NA/NSSP/PlanHistory"
+            dashboardLink.style.cssText += `font-size: 1.5rem; font-weight: bold; text-align: center;`
+            div.appendChild(dashboardLink)
             
             div.appendChild(makeManualTable(data));
 
@@ -1155,9 +1168,15 @@ function runScript() {
             div.style.cssText += `display: flex; flex-direction: column; margin-top: 4rem`;
 
             const p = document.createElement('p');
-            p.textContent = `No plan data found for time selected. Please enter plan data manually.`;
-            p.style.cssText += `font-size: 16px; align-self: center;`;
+            p.textContent = `No plan data found for time selected. If this is incorrect, please check the NSSP dashboard if a plan was sent within 50 minutes before the start of the time period, or 30 minutes after the start of the time period.`;
+            p.style.cssText += `font-size: 16px; align-self: center; text-align: center;`;
             div.appendChild(p);
+
+            const dashboardLink = document.createElement('a')
+            dashboardLink.textContent = "Go to NSSP Dashboard"
+            dashboardLink.href = "https://ecft.fulfillment.a2z.com/#/NA/NSSP/PlanHistory"
+            dashboardLink.style.cssText += `font-size: 1.5rem; font-weight: bold; text-align: center;`
+            div.appendChild(dashboardLink)
             
             div.appendChild(makeManualTable(data));
 
@@ -1236,9 +1255,15 @@ function runScript() {
             div.style.cssText += `display: flex; flex-direction: column; margin-top: 4rem`;
 
             const p = document.createElement('p');
-            p.textContent = `No plan data found for time selected. Please enter plan data manually.`;
-            p.style.cssText += `font-size: 16px; align-self: center;`;
+            p.textContent = `No plan data found for time selected. If this is incorrect, please check the NSSP dashboard if a plan was sent within 50 minutes before the start of the time period, or 30 minutes after the start of the time period.`;
+            p.style.cssText += `font-size: 16px; align-self: center; text-align: center;`;
             div.appendChild(p);
+
+            const dashboardLink = document.createElement('a')
+            dashboardLink.textContent = "NSSP Dashboard"
+            dashboardLink.href = "https://ecft.fulfillment.a2z.com/#/NA/NSSP/PlanHistory"
+            dashboardLink.style.cssText += `font-size: 1.5rem; font-weight: bold; text-align: center;`
+            div.appendChild(dashboardLink)
             
             div.appendChild(makeManualRebinTable(rebinData));
 
@@ -1320,12 +1345,15 @@ function runScript() {
     }
 
     function loadStatusMessage(message) {
+        if (document.getElementById("status-message")) {
+            document.getElementById("status-message").remove()
+        }
         const div = document.createElement('div');
-        div.style.cssText += `display: flex; margin-top: 4rem;`;
+        div.style.cssText += `display: flex; justify-content: center; margin-top: 4rem; text-align: center;`;
         const parent = document.getElementsByClassName('row')[0];        
         const statusMessage = document.createElement('p');
         statusMessage.setAttribute('id', 'status-message');
-        statusMessage.style.cssText += `font-size: 16px; align-self: center; position: relative; left: 35%;`;
+        statusMessage.style.cssText += `font-size: 16px; align-self: center; width: 50%;`;
         statusMessage.textContent = message;
         div.appendChild(statusMessage);
 
@@ -2010,14 +2038,22 @@ function runScript() {
                 method: 'GET',
                 url: getBigTableLink(),
                 onreadystatechange: function(response) {
+                    console.log(`big table response: ${response.readyState}`)
+                    console.log(`big table status: ${response.status}`)
                     if (response.readyState == 4 && response.status == 200) {
+                        console.log(this.response)
                         resolve(this.response);
-                    } else if (response.status >= 400) {
-                        loadStatusMessage('Failed to connect to dashboard. Please ensure you are authenticated in midway and try reloading.');
-                    }
+                    } else if (response.status == 500) {
+                        loadStatusMessage("HTML Error 500: Internal Server Error. Unable to connect to dashboard at this time. Please try again later.")
+                    } else if (response.status >= 500 && response.status !== 500) {
+                        loadStatusMessage('Failed to connect to dashboard. Please try again.');
+                    } else if (response.status == 401 || response.status == 403) {
+                        loadStatusMessage('Failed to connect to dashboard. Please ensure you are authenticated in midway.');
+                    }  
                 }
             })
         }).then((data) => {
+            console.log(`data: ${data}`)
             return data
         });
     }
