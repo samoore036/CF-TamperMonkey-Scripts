@@ -2,7 +2,7 @@
 // @name         Packman HC Tracker
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/blob/main/packman/hc%20tracker.js
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      2.2.1
+// @version      2.3.0
 // @description  Display all pick settings, including hcs, and pack hcs
 // @author       mooshahe
 // @match        https://insights.prod-na.pack.aft.a2z.com/packman/recent?fc=*
@@ -91,6 +91,7 @@ function loadScript(data) {
 
     const activeData = JSON.parse(data[0]).processPathInformationMap;
     const setData = JSON.parse(data[1]).processPaths; //gives an array of all process paths with set settings
+    console.log(activeData)
     let batchData = {};
     if (JSON.parse(data[2])) {
         batchData = JSON.parse(data[2]).pickBatchInformationList;
@@ -1129,10 +1130,10 @@ function loadScript(data) {
             display: flex; 
             gap: 2vw; 
             align-self: center;
-            height: 6rem;
         `
         summaryDiv.appendChild(makeMultisSummaryDiv());
         summaryDiv.appendChild(makeSinglesSummaryDiv());
+        summaryDiv.appendChild(makePsTable());
 
         return summaryDiv;
     }
@@ -1229,6 +1230,98 @@ function loadScript(data) {
         div.appendChild(categoryDivs);
 
         return div;
+    }
+
+    function makePsTable() {
+        const psolveTable = document.createElement('table');
+        psolveTable.setAttribute('id', 'psolve-table');
+        psolveTable.style.cssText += `
+            text-align: center;
+            border-collapse: collapse;
+            line-height: 20px;
+        `
+
+        const titleRow = document.createElement('tr');
+        titleRow.style.cssText += `
+            font-size: 1.1rem;
+            color: white;
+            background-color: #3b82f6;
+            border: 1px solid black;+
+            border-bottom: none;
+            height: 10px;
+        `
+
+        const titleHeader = document.createElement('th');
+        titleHeader.textContent = 'Psolve Picks';
+        titleHeader.colSpan = '3';
+        titleRow.appendChild(titleHeader);
+        psolveTable.appendChild(titleRow);
+
+        const categoriesRow = document.createElement('tr');
+        categoriesRow.style.cssText += `
+            font-size: 1.2rem;
+            color: white;
+            background-color: #3b82f6;
+            border-left: 1px solid black;
+            border-right: 1px solid black;
+            height: 10px;
+        `
+
+        const td1 = makeHeaderTd('Process Path');
+        categoriesRow.appendChild(td1);
+        const td2 = makeHeaderTd('Active Pickers');
+        categoriesRow.appendChild(td2);
+        const td3 = makeHeaderTd('Total Units');
+        categoriesRow.appendChild(td3);
+        psolveTable.appendChild(categoriesRow);
+
+        psolveTable.appendChild(makePsolveRow("PPQA"))
+        psolveTable.appendChild(makePsolveRow("PPProblemSolve"))
+        psolveTable.appendChild(makePsolveRow("PPSingleTeamLift"))
+        psolveTable.appendChild(makePsolveRow("PPNonConSetDown"))
+        psolveTable.appendChild(makePsolveRow("PPRebinHotpick"))
+
+
+        return psolveTable;
+    }
+
+    function makePsolveRow(pp) {
+        const row = document.createElement('tr')
+        row.style.cssText += `
+            border: 1px solid black;
+            font-size: 1rem;
+        `
+        let pathData = null
+        if (activeData[pp]) {
+            pathData = activeData[pp]
+
+            const ppTd = document.createElement("td");
+            ppTd.textContent = pp;
+            ppTd.style.cssText += `text-align: left; padding-left: 0.3rem;`
+            row.appendChild(ppTd)
+
+            const activePickers = pathData.PickerCount
+            const hcTd = document.createElement("td");
+            hcTd.textContent = activePickers
+            row.appendChild(hcTd)
+
+            const nonprioritized = pathData.NonPrioritizedUnitsCounts
+            let unitCount = 0
+            for (category in nonprioritized) {
+                unitCount += parseInt(nonprioritized[category])
+            }
+            const prioritized = pathData.PrioritizedUnitsCounts
+            for (category in prioritized) {
+                unitCount += parseInt(prioritized[category])
+            }
+            const unitsTd = document.createElement("td");
+            unitsTd.textContent = unitCount
+            row.appendChild(unitsTd)
+
+            return row
+        } else {
+            return
+        }
     }
 
     function makeTsoPickTable() {
