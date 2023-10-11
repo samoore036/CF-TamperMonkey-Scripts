@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      2.0
+// @version      2.1
 // @description  Pull planned hcs/rates and compare against ppa
 // @author       mooshahe
 // @match        https://fclm-portal.amazon.com/ppa/inspect/*
@@ -2033,6 +2033,7 @@ function runScript() {
 
     // calls the big table data and filters for the plan times of the specific fc
     function getPlanTimes() {
+        console.log(getBigTableLink())
         return new Promise(function(resolve) {
             GM.xmlHttpRequest({
                 method: 'GET',
@@ -2075,9 +2076,10 @@ function runScript() {
         const startDate = document.getElementById('startDateIntraday').value.split("/")
         const startHour = document.getElementById('startHourIntraday').value
         let date = new Date(startDate[0], startDate[1], startDate[2], startHour - 3)
+        hour = date.getHours() < 10 ? `0${date.getHours()}` : date.getHours()
+        day = date.getDate() < 10 ? `0${date.getDate()}` : date.getDate()
         month = date.getMonth() < 10 ? `0${date.getMonth()}` : date.getMonth()
-        
-        return `https://ecft.fulfillment.a2z.com/api/NA/nssp/get_nssp_big_table_new?startDate=${date.getFullYear()}-${month}-${date.getDate()}&startTime=${date.getHours()}:00:00&fcSelected=ABE4,ACY2,AKR1,ALB1,AMA1,CHA2,CHO1,CMH2,CMH3,DEN8,DET2,FAT2,FOE1,FTW5,GEG2,GSO1,HOU8,HSV1,ICT2,IGQ2,ILG1,IND2,JAX3,JVL1,LAS6,LFT1,LGB6,LIT2,MCE1,MCO2,MDT4,MDW6,MDW9,MGE3,MKC4,OKC2,ORD2,PDX7,PHL6,PHX5,PHX7,SAT4,SCK1,SJC7,SLC2,SMF6,STL3,STL4,SWF1,TEB3,TEB4,TPA3,YEG1,YOO1,YOW1,YYZ9&region=NA`
+        return `https://ecft.fulfillment.a2z.com/api/NA/nssp/get_nssp_big_table_new?startDate=${date.getFullYear()}-${month}-${day}&startTime=${hour}:00:00&fcSelected=ABE4,ACY2,AKR1,ALB1,AMA1,CHA2,CHO1,CMH2,CMH3,DEN8,DET2,FAT2,FOE1,FTW5,GEG2,GSO1,HOU8,HSV1,ICT2,IGQ2,ILG1,IND2,JAX3,JVL1,LAS6,LFT1,LGB6,LIT2,MCE1,MCO2,MDT4,MDW6,MDW9,MGE3,MKC4,OKC2,ORD2,PDX7,PHL6,PHX5,PHX7,SAT4,SCK1,SJC7,SLC2,SMF6,STL3,STL4,SWF1,TEB3,TEB4,TPA3,YEG1,YOO1,YOW1,YYZ9&region=NA`
     }
 
     function getPickData(planTime) {
