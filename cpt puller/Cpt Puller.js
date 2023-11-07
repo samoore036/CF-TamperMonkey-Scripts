@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      2.3
+// @version      3.0
 // @description  Display TRB status and calculate mitigation in CORA
 // @author       mooshahe
 // @match        https://rodeo-iad.amazon.com/*/ExSD*
@@ -105,7 +105,7 @@ function getNextCpt() {
     // compare curr hour against cpts with tds array. keep looping until curr hour < tds array
     const timeNow = new Date();
     // include the offset so the pull will be accurate regardless of user's  current timezone
-    const hourOffset = getHourOffset(getFcTimeZone(fc), getTimeZoneOffset());
+    const hourOffset = getHourOffset(getFcTimeZone(fc, timeNow), getTimeZoneOffset(timeNow));
     // new date to set seconds to zero for better comparison
     const currTime = new Date(timeNow.getFullYear(), timeNow.getMonth(), timeNow.getDate(), timeNow.getHours() + hourOffset, timeNow.getMinutes());
     // add slam pad time 
@@ -251,7 +251,11 @@ function getUtcOffset(hourOffset) {
 
 // have all timezones for all USNS in case user is pulling for a timezone different than on device
 // pst returns 0, mst 1, cst 2, est 3
-function getFcTimeZone(fc) {
+function getFcTimeZone(fc, date) {
+    let dstOffset = 0
+    if (!isDST(date)) {
+        dstOffset = -1
+    }
     switch(fc) {
         case 'BFI3':
         case 'FAT2':
@@ -263,8 +267,6 @@ function getFcTimeZone(fc) {
         case 'OAK3':
         case 'ONT9':
         case 'PDX7':
-        case 'PHX5':
-        case 'PHX7':
         case 'RNO4':
         case 'SBD2':
         case 'SCK1':
@@ -272,13 +274,13 @@ function getFcTimeZone(fc) {
         case 'SMF6':
         case 'SNA4':
         case 'YVR3':
-            return 0;
+            return 0 + dstOffset;
         case 'DEN2':
         case 'DEN8':
         case 'SLC2':
         case 'YEG1':
         case 'YYZ9':
-            return 1;
+            return 1 + dstOffset;
         case 'AMA1':
         case 'BNA2':
         case 'DFW6':
@@ -304,7 +306,7 @@ function getFcTimeZone(fc) {
         case 'SAT4':
         case 'STL3':
         case 'STL4':
-            return 2;
+            return 2 + dstOffset;
         case 'ABE4':
         case 'ACY2':
         case 'ALB1':
@@ -345,8 +347,22 @@ function getFcTimeZone(fc) {
         case 'YOW1':
         case 'YYZ2':
         case 'YYZ3':
-            return 3;
+            return 3 + dstOffset;
     }
+    if ((fc == 'PHX5' || fc == 'PHX7') && isDST(date)) {
+        return -1;
+    } else {
+        return 0;
+    }
+}
+
+// DST is march - nov where pst is +8 utc and est is +5 utc
+// return true if 
+function isDST(date) {
+    const jan = new Date(date.getFullYear(), 0, 1).getTimezoneOffset();
+    const july = new Date(date.getFullYear(), 6, 1).getTimezoneOffset();
+
+    return Math.max(jan, july) !== date.getTimezoneOffset()
 }
 
 /* DOM modules */
