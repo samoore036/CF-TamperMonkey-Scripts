@@ -3,7 +3,7 @@
 // @updateURL    https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @downloadURL  https://github.com/samoore036/CF-TamperMonkey-Scripts/tree/main/cpt%20puller
 // @namespace    https://github.com/samoore036/CF-TamperMonkey-Scripts
-// @version      3.0
+// @version      3.1
 // @description  Display TRB status and calculate mitigation in CORA
 // @author       mooshahe
 // @match        https://rodeo-iad.amazon.com/*/ExSD*
@@ -104,7 +104,7 @@ function getNextCpt() {
 
     // compare curr hour against cpts with tds array. keep looping until curr hour < tds array
     const timeNow = new Date();
-    // include the offset so the pull will be accurate regardless of user's  current timezone
+    // include the offset so the pull will be accurate regardless of user's current timezone
     const hourOffset = getHourOffset(getFcTimeZone(fc, timeNow), getTimeZoneOffset(timeNow));
     // new date to set seconds to zero for better comparison
     const currTime = new Date(timeNow.getFullYear(), timeNow.getMonth(), timeNow.getDate(), timeNow.getHours() + hourOffset, timeNow.getMinutes());
@@ -236,6 +236,7 @@ function getHourOffset(fcOffset, timeOffset) {
 function getTimeZoneOffset() {
     const utcOffset = new Date().getTimezoneOffset();
     switch(utcOffset) {
+        case 480: return -1;
         case 420: return 0;
         case 360: return 1;
         case 300: return 2;
